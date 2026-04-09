@@ -1,0 +1,291 @@
+"""
+AdSim API -- 광고/USP 시뮬레이션 엔드포인트
+"""
+
+import os
+from flask import Blueprint, jsonify, request
+from werkzeug.utils import secure_filename
+
+from ..config import Config
+from ..database.adsim_db import AdSimDB
+
+adsim_bp = Blueprint('adsim', __name__, url_prefix='/api/adsim')
+
+ALLOWED_EXTENSIONS = {'pdf', 'txt', 'md'}
+
+
+def _ok(data, status=200):
+    return jsonify({"success": True, "data": data}), status
+
+
+def _err(message, status=400):
+    return jsonify({"success": False, "error": message}), status
+
+
+# ── Projects ──
+
+@adsim_bp.route('/projects', methods=['POST'])
+def create_project():
+    body = request.get_json()
+    if not body or not body.get('name') or not body.get('type'):
+        return _err("name과 type은 필수입니다")
+    if body['type'] not in ('ad_reaction', 'usp_test'):
+        return _err("type은 ad_reaction 또는 usp_test여야 합니다")
+    project = AdSimDB.create_project(
+        name=body['name'],
+        project_type=body['type'],
+        description=body.get('description', '')
+    )
+    return _ok(project, 201)
+
+
+@adsim_bp.route('/projects', methods=['GET'])
+def list_projects():
+    return _ok(AdSimDB.list_projects())
+
+
+@adsim_bp.route('/projects/<project_id>', methods=['GET'])
+def get_project(project_id):
+    project = AdSimDB.get_project(project_id)
+    if not project:
+        return _err("프로젝트를 찾을 수 없습니다", 404)
+    return _ok(project)
+
+
+@adsim_bp.route('/projects/<project_id>', methods=['DELETE'])
+def delete_project(project_id):
+    if not AdSimDB.delete_project(project_id):
+        return _err("프로젝트를 찾을 수 없습니다", 404)
+    return _ok({"deleted": project_id})
+
+
+# ── Seed Materials ──
+
+@adsim_bp.route('/projects/<project_id>/seeds', methods=['POST'])
+def create_seed(project_id):
+    if not AdSimDB.get_project(project_id):
+        return _err("프로젝트를 찾을 수 없습니다", 404)
+
+    content = ""
+    file_path = ""
+    file_size = 0
+
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        seed_type = request.form.get('type', 'ad_script')
+        content = request.form.get('content', '')
+        file = request.files.get('file')
+        if file and file.filename:
+            filename = secure_filename(file.filename)
+            ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+            if ext not in ALLOWED_EXTENSIONS:
+                return _err(f"허용되지 않는 파일 형식입니다. 허용: {ALLOWED_EXTENSIONS}")
+            upload_dir = os.path.join(Config.UPLOAD_FOLDER, 'adsim', project_id)
+            os.makedirs(upload_dir, exist_ok=True)
+            file_path = os.path.join(upload_dir, filename)
+            file.save(file_path)
+            file_size = os.path.getsize(file_path)
+            if ext == 'pdf':
+                try:
+                    import fitz
+                    doc = fitz.open(file_path)
+                    content = "\n".join(page.get_text() for page in doc)
+                    doc.close()
+                except Exception:
+                    pass
+    else:
+        body = request.get_json()
+        if not body:
+            return _err("요청 본문이 비어있습니다")
+        seed_type = body.get('type', 'ad_script')
+        content = body.get('content', '')
+
+    if not content and not file_path:
+        return _err("content 또는 file 중 하나는 필수입니다")
+    if seed_type not in ('ad_script', 'usp_text', 'competitor_info'):
+        return _err("type은 ad_script, usp_text, competitor_info 중 하나여야 합니다")
+    if len(content) > 5000:
+        return _err("내용이 너무 깁니다. 최대 5000자까지 가능합니다")
+
+    seed = AdSimDB.create_seed(
+        project_id=project_id,
+        seed_type=seed_type,
+        content=content,
+        file_path=file_path,
+        file_size=file_size
+    )
+    return _ok(seed, 201)
+
+
+@adsim_bp.route('/projects/<project_id>/seeds', methods=['GET'])
+def list_seeds(project_id):
+    if not AdSimDB.get_project(project_id):
+        return _err("프로젝트를 찾을 수 없습니다", 404)
+    return _ok(AdSimDB.list_seeds(project_id))
+
+
+@adsim_bp.route('/projects/<project_id>/seeds/<seed_id>', methods=['DELETE'])
+def delete_seed(project_id, seed_id):
+    if not AdSimDB.delete_seed(seed_id):
+        return _err("시드 자료를 찾을 수 없습니다", 404)
+    return _ok({"deleted": seed_id})
+
+
+# ── Persona Configs ──
+
+PRESET_PERSONAS = [
+    {"name": "2030 건강 관심 여성", "age_range": "25-35", "gender": "여성 70%, 남성 30%", "interests": ["건강", "다이어트", "운동"], "consumption_habits": "편의점 음료 주 3회 이상 구매"},
+    {"name": "3040 직장인 남성", "age_range": "30-45", "gender": "남성 70%, 여성 30%", "interests": ["경력", "효율성", "재테크"], "consumption_habits": "출퇴근 중 커피/음료 구매"},
+    {"name": "2030 트렌드세터", "age_range": "20-30", "gender": "여성 60%, 남성 40%", "interests": ["SNS", "신제품", "패션"], "consumption_habits": "인스타 광고 보고 구매 경험 다수"},
+    {"name": "4050 가족 중심", "age_range": "40-55", "gender": "여성 50%, 남성 50%", "interests": ["가족", "건강", "교육"], "consumption_habits": "대형마트 장보기 주 1회"},
+    {"name": "2030 학생", "age_range": "18-25", "gender": "여성 50%, 남성 50%", "interests": ["가성비", "편의점", "유튜브"], "consumption_habits": "편의점 행사 상품 위주 구매"},
+    {"name": "3040 프리미엄 소비자", "age_range": "30-45", "gender": "여성 50%, 남성 50%", "interests": ["품질", "브랜드", "건강기능"], "consumption_habits": "프리미엄 제품 선호, 가격 덜 민감"},
+    {"name": "전 연령 일반", "age_range": "20-55", "gender": "여성 50%, 남성 50%", "interests": ["일상", "가성비", "편리함"], "consumption_habits": "다양한 채널에서 구매"},
+    {"name": "시니어 보수층", "age_range": "50-65", "gender": "여성 50%, 남성 50%", "interests": ["건강", "전통", "신뢰"], "consumption_habits": "검증된 브랜드만 구매"},
+    {"name": "2030 MZ 감성", "age_range": "20-35", "gender": "여성 60%, 남성 40%", "interests": ["감성소비", "인스타그래머블", "경험"], "consumption_habits": "감성적 패키징/스토리에 반응"},
+    {"name": "3040 워킹맘", "age_range": "30-45", "gender": "여성 90%, 남성 10%", "interests": ["시간절약", "간편함", "아이건강"], "consumption_habits": "온라인 장보기, 간편식 다수 구매"},
+]
+
+
+@adsim_bp.route('/personas/presets', methods=['GET'])
+def get_preset_personas():
+    return _ok(PRESET_PERSONAS)
+
+
+@adsim_bp.route('/projects/<project_id>/personas', methods=['POST'])
+def create_persona(project_id):
+    if not AdSimDB.get_project(project_id):
+        return _err("프로젝트를 찾을 수 없습니다", 404)
+    body = request.get_json()
+    if not body or not body.get('name') or not body.get('age_range'):
+        return _err("name과 age_range는 필수입니다")
+    agent_count = body.get('agent_count', 30)
+    if not (10 <= agent_count <= 100):
+        return _err("agent_count는 10~100 사이여야 합니다")
+    persona = AdSimDB.create_persona(
+        project_id=project_id,
+        name=body['name'],
+        age_range=body['age_range'],
+        gender=body.get('gender', ''),
+        interests=body.get('interests', []),
+        consumption_habits=body.get('consumption_habits', ''),
+        agent_count=agent_count,
+        is_preset=body.get('is_preset', False)
+    )
+    return _ok(persona, 201)
+
+
+@adsim_bp.route('/projects/<project_id>/personas', methods=['GET'])
+def list_personas(project_id):
+    if not AdSimDB.get_project(project_id):
+        return _err("프로젝트를 찾을 수 없습니다", 404)
+    return _ok(AdSimDB.list_personas(project_id))
+
+
+@adsim_bp.route('/projects/<project_id>/personas/<persona_id>', methods=['DELETE'])
+def delete_persona(project_id, persona_id):
+    if not AdSimDB.delete_persona(persona_id):
+        return _err("페르소나를 찾을 수 없습니다", 404)
+    return _ok({"deleted": persona_id})
+
+
+# ── Simulations ──
+
+@adsim_bp.route('/projects/<project_id>/simulations', methods=['POST'])
+def create_simulation(project_id):
+    if not AdSimDB.get_project(project_id):
+        return _err("프로젝트를 찾을 수 없습니다", 404)
+    body = request.get_json()
+    if not body or not body.get('seed_id') or not body.get('persona_id'):
+        return _err("seed_id와 persona_id는 필수입니다")
+    if not AdSimDB.get_seed(body['seed_id']):
+        return _err("시드 자료를 찾을 수 없습니다", 404)
+    total_rounds = body.get('total_rounds', 30)
+    if not (5 <= total_rounds <= 50):
+        return _err("total_rounds는 5~50 사이여야 합니다")
+
+    simulation = AdSimDB.create_simulation(
+        project_id=project_id,
+        persona_config_id=body['persona_id'],
+        seed_id=body['seed_id'],
+        total_rounds=total_rounds
+    )
+
+    # TODO: 비동기로 시뮬레이션 실행 (ad_simulation_service 연동)
+    # 현재는 pending 상태로 생성만 함
+
+    return _ok(simulation, 202)
+
+
+@adsim_bp.route('/simulations/<simulation_id>', methods=['GET'])
+def get_simulation(simulation_id):
+    sim = AdSimDB.get_simulation(simulation_id)
+    if not sim:
+        return _err("시뮬레이션을 찾을 수 없습니다", 404)
+    return _ok(sim)
+
+
+@adsim_bp.route('/simulations/<simulation_id>/progress', methods=['GET'])
+def get_simulation_progress(simulation_id):
+    sim = AdSimDB.get_simulation(simulation_id)
+    if not sim:
+        return _err("시뮬레이션을 찾을 수 없습니다", 404)
+    progress = 0
+    if sim['total_rounds'] > 0:
+        progress = round(sim['current_round'] / sim['total_rounds'] * 100)
+    return _ok({
+        "simulation_id": simulation_id,
+        "status": sim['status'],
+        "current_round": sim['current_round'],
+        "total_rounds": sim['total_rounds'],
+        "progress_percent": progress
+    })
+
+
+@adsim_bp.route('/simulations/<simulation_id>/cancel', methods=['PATCH'])
+def cancel_simulation(simulation_id):
+    sim = AdSimDB.get_simulation(simulation_id)
+    if not sim:
+        return _err("시뮬레이션을 찾을 수 없습니다", 404)
+    if sim['status'] not in ('pending', 'running'):
+        return _err("취소할 수 없는 상태입니다")
+    AdSimDB.update_simulation_status(simulation_id, "failed")
+    return _ok({"simulation_id": simulation_id, "status": "failed"})
+
+
+# ── Results ──
+
+@adsim_bp.route('/simulations/<simulation_id>/report', methods=['GET'])
+def get_report(simulation_id):
+    report = AdSimDB.get_report(simulation_id)
+    if not report:
+        return _err("보고서가 아직 생성되지 않았습니다", 404)
+    return _ok(report)
+
+
+@adsim_bp.route('/simulations/<simulation_id>/responses', methods=['GET'])
+def list_responses(simulation_id):
+    responses = AdSimDB.list_responses(simulation_id)
+    return _ok({
+        "total_agents": len(responses),
+        "responses": [{
+            "response_id": r["response_id"],
+            "agent_id": r["agent_id"],
+            "agent_name": r["agent_name"],
+            "sentiment": r["sentiment"],
+            "sentiment_score": r["sentiment_score"],
+            "key_reactions": r["key_reactions"]
+        } for r in responses]
+    })
+
+
+@adsim_bp.route('/simulations/<simulation_id>/responses/<response_id>', methods=['GET'])
+def get_response_detail(simulation_id, response_id):
+    resp = AdSimDB.get_response(response_id)
+    if not resp:
+        return _err("에이전트 반응을 찾을 수 없습니다", 404)
+    return _ok(resp)
+
+
+@adsim_bp.route('/simulations/<simulation_id>/rounds', methods=['GET'])
+def list_rounds(simulation_id):
+    return _ok(AdSimDB.list_rounds(simulation_id))

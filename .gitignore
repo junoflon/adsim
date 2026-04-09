@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+.venv/
+
+# Environment
+.env
+*.pyc
+__pycache__/
+
+# Build
+dist/
+build/
+
+# Database
+*.db
+
+# Uploads
+MiroFish/backend/uploads/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Lock files (keep package-lock.json but ignore uv.lock)
+uv.lock
