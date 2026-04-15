@@ -13,12 +13,13 @@ WORKDIR /app
 # 先复制依赖描述文件以利用缓存
 COPY package.json package-lock.json ./
 COPY frontend/package.json frontend/package-lock.json ./frontend/
-COPY backend/pyproject.toml backend/uv.lock ./backend/
+COPY backend/pyproject.toml ./backend/
+COPY backend/requirements.txt ./backend/
 
 # 安装依赖（Node + Python）
 RUN npm ci \
   && npm ci --prefix frontend \
-  && cd backend && uv sync --frozen
+  && cd backend && uv pip install --system -r requirements.txt
 
 # 复制项目源码
 COPY . .
