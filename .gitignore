@@ -28,5 +28,5 @@ Thumbs.db
 # Logs
 *.log
 
-# Lock files (keep package-lock.json but ignore uv.lock)
-uv.lock
+# Lock files (keep package-lock.json)
+# Note: uv.lock is needed for Docker build, tracked via git add -f
