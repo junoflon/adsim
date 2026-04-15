@@ -76,9 +76,26 @@ def create_app(config_class=Config):
     @app.route('/health')
     def health():
         return {'status': 'ok', 'service': 'MiroFish Backend'}
-    
+
+    # Serve Vue frontend build (production)
+    import os
+    frontend_dist = os.path.join(os.path.dirname(__file__), '../../frontend/dist')
+    if os.path.exists(frontend_dist):
+        from flask import send_from_directory
+
+        @app.route('/', defaults={'path': ''})
+        @app.route('/<path:path>')
+        def serve_frontend(path):
+            file_path = os.path.join(frontend_dist, path)
+            if path and os.path.exists(file_path):
+                return send_from_directory(frontend_dist, path)
+            return send_from_directory(frontend_dist, 'index.html')
+
+        if should_log_startup:
+            logger.info(f"Serving frontend from {frontend_dist}")
+
     if should_log_startup:
         logger.info("MiroFish Backend 启动完成")
-    
+
     return app
 
