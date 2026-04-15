@@ -9,18 +9,20 @@ RUN apt-get update \
 
 WORKDIR /app
 
-# Copy everything
+# Copy everything from MiroFish
 COPY MiroFish/ .
 
-# Install frontend deps and build static files
-RUN cd frontend && npm ci && npm run build
+# Install frontend deps and build
+RUN cd frontend && npm ci && npm run build && ls -la dist/
 
 # Install backend deps
 RUN cd backend && pip install --no-cache-dir -r requirements.txt
 
-# Flask will serve both API and static frontend
+# Verify frontend dist exists
+RUN ls -la /app/frontend/dist/index.html
+
 ENV PORT=5001
-ENV FLASK_PORT=5001
 EXPOSE 5001
 
-CMD ["python", "backend/run.py"]
+WORKDIR /app/backend
+CMD ["python", "run.py"]

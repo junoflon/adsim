@@ -79,8 +79,18 @@ def create_app(config_class=Config):
 
     # Serve Vue frontend build (production)
     import os
-    frontend_dist = os.path.join(os.path.dirname(__file__), '../../frontend/dist')
-    if os.path.exists(frontend_dist):
+    # Try multiple possible paths for frontend dist
+    possible_paths = [
+        os.path.join(os.path.dirname(__file__), '../../frontend/dist'),
+        '/app/frontend/dist',
+        os.path.join(os.getcwd(), 'frontend/dist'),
+    ]
+    frontend_dist = None
+    for p in possible_paths:
+        if os.path.exists(p):
+            frontend_dist = os.path.abspath(p)
+            break
+    if frontend_dist:
         from flask import send_from_directory
 
         @app.route('/', defaults={'path': ''})
@@ -93,6 +103,9 @@ def create_app(config_class=Config):
 
         if should_log_startup:
             logger.info(f"Serving frontend from {frontend_dist}")
+    else:
+        if should_log_startup:
+            logger.warning("Frontend dist not found, tried: " + str(possible_paths))
 
     if should_log_startup:
         logger.info("MiroFish Backend 启动完成")
