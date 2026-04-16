@@ -27,10 +27,11 @@ class Config:
     # JSON配置 - 禁用ASCII转义，让中文直接显示（而不是 \uXXXX 格式）
     JSON_AS_ASCII = False
     
-    # LLM配置（统一使用OpenAI格式）
-    LLM_API_KEY = os.environ.get('LLM_API_KEY')
-    LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
-    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
+    # LLM 설정 (Anthropic Claude SDK 사용)
+    # LLM_API_KEY는 ANTHROPIC_API_KEY와 동일하게 처리됨
+    LLM_API_KEY = os.environ.get('LLM_API_KEY') or os.environ.get('ANTHROPIC_API_KEY')
+    LLM_BASE_URL = os.environ.get('LLM_BASE_URL', '')  # 미사용 (호환성을 위해 유지)
+    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'claude-sonnet-4-5')
     
     # Zep配置
     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')

@@ -995,44 +995,35 @@ def create_model(config: Dict[str, Any], use_boost: bool = False):
         config: 模拟配置字典
         use_boost: 是否使用加速 LLM 配置（如果可用）
     """
-    # 检查是否有加速配置
+    # boost 설정 확인
     boost_api_key = os.environ.get("LLM_BOOST_API_KEY", "")
-    boost_base_url = os.environ.get("LLM_BOOST_BASE_URL", "")
     boost_model = os.environ.get("LLM_BOOST_MODEL_NAME", "")
     has_boost_config = bool(boost_api_key)
-    
-    # 根据参数和配置情况选择使用哪个 LLM
+
+    # boost 사용 여부에 따라 키 선택
     if use_boost and has_boost_config:
-        # 使用加速配置
         llm_api_key = boost_api_key
-        llm_base_url = boost_base_url
         llm_model = boost_model or os.environ.get("LLM_MODEL_NAME", "")
-        config_label = "[加速LLM]"
+        config_label = "[Boost LLM]"
     else:
-        # 使用通用配置
-        llm_api_key = os.environ.get("LLM_API_KEY", "")
-        llm_base_url = os.environ.get("LLM_BASE_URL", "")
+        llm_api_key = os.environ.get("LLM_API_KEY", "") or os.environ.get("ANTHROPIC_API_KEY", "")
         llm_model = os.environ.get("LLM_MODEL_NAME", "")
-        config_label = "[通用LLM]"
-    
-    # 如果 .env 中没有模型名，则使用 config 作为备用
+        config_label = "[Default LLM]"
+
     if not llm_model:
-        llm_model = config.get("llm_model", "gpt-4o-mini")
-    
-    # 设置 camel-ai 所需的环境变量
+        llm_model = config.get("llm_model", "claude-sonnet-4-5")
+
+    # CAMEL-AI에 필요한 환경변수 설정
     if llm_api_key:
-        os.environ["OPENAI_API_KEY"] = llm_api_key
-    
-    if not os.environ.get("OPENAI_API_KEY"):
-        raise ValueError("缺少 API Key 配置，请在项目根目录 .env 文件中设置 LLM_API_KEY")
-    
-    if llm_base_url:
-        os.environ["OPENAI_API_BASE_URL"] = llm_base_url
-    
-    print(f"{config_label} model={llm_model}, base_url={llm_base_url[:40] if llm_base_url else '默认'}...")
-    
+        os.environ["ANTHROPIC_API_KEY"] = llm_api_key
+
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        raise ValueError("API 키가 없습니다. .env 파일에 LLM_API_KEY를 설정하세요")
+
+    print(f"{config_label} Anthropic Claude, model={llm_model}")
+
     return ModelFactory.create(
-        model_platform=ModelPlatformType.OPENAI,
+        model_platform=ModelPlatformType.ANTHROPIC,
         model_type=llm_model,
     )
 
