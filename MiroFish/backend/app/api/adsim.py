@@ -3,11 +3,13 @@ AdSim API -- 광고/USP 시뮬레이션 엔드포인트
 """
 
 import os
+import threading
 from flask import Blueprint, jsonify, request
 from werkzeug.utils import secure_filename
 
 from ..config import Config
 from ..database.adsim_db import AdSimDB
+from ..services.ad_simulation_service import run_simulation
 
 adsim_bp = Blueprint('adsim', __name__, url_prefix='/api/adsim')
 
@@ -159,8 +161,8 @@ def create_persona(project_id):
     if not body or not body.get('name') or not body.get('age_range'):
         return _err("name과 age_range는 필수입니다")
     agent_count = body.get('agent_count', 30)
-    if not (10 <= agent_count <= 100):
-        return _err("agent_count는 10~100 사이여야 합니다")
+    if not (3 <= agent_count <= 100):
+        return _err("agent_count는 3~100 사이여야 합니다")
     persona = AdSimDB.create_persona(
         project_id=project_id,
         name=body['name'],
@@ -210,8 +212,28 @@ def create_simulation(project_id):
         total_rounds=total_rounds
     )
 
-    # TODO: 비동기로 시뮬레이션 실행 (ad_simulation_service 연동)
-    # 현재는 pending 상태로 생성만 함
+    # 시뮬레이션 실행에 필요한 데이터 수집
+    seed = AdSimDB.get_seed(body['seed_id'])
+    personas = AdSimDB.list_personas(project_id)
+    persona = next((p for p in personas if p['persona_id'] == body['persona_id']), None)
+    if not persona:
+        return _err("페르소나를 찾을 수 없습니다", 404)
+
+    agent_count = body.get('custom_agent_count') or persona['agent_count']
+
+    # 비동기로 시뮬레이션 실행
+    thread = threading.Thread(
+        target=run_simulation,
+        kwargs={
+            'simulation_id': simulation['simulation_id'],
+            'seed_content': seed['content'] or '',
+            'persona_config': persona,
+            'total_rounds': total_rounds,
+            'agent_count': agent_count,
+        },
+        daemon=True
+    )
+    thread.start()
 
     return _ok(simulation, 202)
 

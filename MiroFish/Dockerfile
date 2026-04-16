@@ -1,30 +1,27 @@
 FROM python:3.11
 
-# 安装 Node.js （满足 >=18）及必要工具
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends nodejs npm \
+  && apt-get install -y --no-install-recommends curl \
+  && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+  && apt-get install -y --no-install-recommends nodejs \
   && rm -rf /var/lib/apt/lists/*
-
-# 从 uv 官方镜像复制 uv
-COPY --from=ghcr.io/astral-sh/uv:0.9.26 /uv /uvx /bin/
 
 WORKDIR /app
 
-# 先复制依赖描述文件以利用缓存
-COPY package.json package-lock.json ./
-COPY frontend/package.json frontend/package-lock.json ./frontend/
-COPY backend/pyproject.toml ./backend/
-COPY backend/requirements.txt ./backend/
-
-# 安装依赖（Node + Python）
-RUN npm ci \
-  && npm ci --prefix frontend \
-  && cd backend && uv pip install --system -r requirements.txt
-
-# 复制项目源码
+# Copy everything
 COPY . .
 
-EXPOSE 3000 5001
+# Install frontend deps and build static files
+RUN cd frontend && npm ci && npm run build && ls -la dist/index.html
 
-# 同时启动前后端（开发模式）
-CMD ["npm", "run", "dev"]
+# Install backend deps
+RUN cd backend && pip install --no-cache-dir -r requirements.txt
+
+# Verify build
+RUN test -f /app/frontend/dist/index.html && echo "Frontend build OK"
+
+ENV PORT=5001
+EXPOSE 5001
+
+WORKDIR /app/backend
+CMD ["python", "run.py"]

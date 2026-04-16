@@ -78,7 +78,6 @@ def create_app(config_class=Config):
         return {'status': 'ok', 'service': 'MiroFish Backend'}
 
     # Serve Vue frontend build (production)
-    import os
     # Try multiple possible paths for frontend dist
     possible_paths = [
         os.path.join(os.path.dirname(__file__), '../../frontend/dist'),

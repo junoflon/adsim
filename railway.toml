@@ -1,5 +1,6 @@
 [build]
-dockerfilePath = "Dockerfile"
+dockerfilePath = "MiroFish/Dockerfile"
+dockerContext = "MiroFish"
 
 [deploy]
 restartPolicyType = "ON_FAILURE"
