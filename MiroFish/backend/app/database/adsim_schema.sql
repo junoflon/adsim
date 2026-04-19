@@ -93,3 +93,24 @@ CREATE TABLE IF NOT EXISTS adsim_reports (
     FOREIGN KEY(simulation_id) REFERENCES adsim_simulations(simulation_id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_reports_sim ON adsim_reports(simulation_id);
+
+CREATE TABLE IF NOT EXISTS adsim_ab_comparisons (
+    comparison_id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    persona_config_id TEXT NOT NULL,
+    seed_a_id TEXT NOT NULL,
+    seed_b_id TEXT NOT NULL,
+    simulation_a_id TEXT,
+    simulation_b_id TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    comparison_result TEXT,
+    created_at TEXT NOT NULL,
+    completed_at TEXT,
+    FOREIGN KEY(project_id) REFERENCES adsim_projects(project_id) ON DELETE CASCADE,
+    FOREIGN KEY(persona_config_id) REFERENCES adsim_persona_configs(persona_id),
+    FOREIGN KEY(seed_a_id) REFERENCES adsim_seed_materials(seed_id),
+    FOREIGN KEY(seed_b_id) REFERENCES adsim_seed_materials(seed_id)
+);
+CREATE INDEX IF NOT EXISTS idx_comparisons_project ON adsim_ab_comparisons(project_id);
+CREATE INDEX IF NOT EXISTS idx_comparisons_status ON adsim_ab_comparisons(status);

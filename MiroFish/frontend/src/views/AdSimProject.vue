@@ -9,6 +9,12 @@
         <span class="breadcrumb-sep">/</span>
         <span class="breadcrumb-current">{{ project?.name || '...' }}</span>
       </div>
+      <div class="topbar-right">
+        <button class="ab-entry" @click="$router.push(`/adsim/project/${projectId}/compare`)" v-if="project">
+          <span class="ab-icon">⚖️</span>
+          A/B 비교
+        </button>
+      </div>
     </header>
 
     <div class="content" v-if="project">
@@ -234,7 +240,10 @@ const handleRun = async () => {
 * { box-sizing: border-box; }
 .adsim-project { min-height: 100vh; background: var(--bg); color: var(--text); font-family: var(--font); -webkit-font-smoothing: antialiased; }
 
-.topbar { height: 56px; display: flex; align-items: center; padding: 0 32px; border-bottom: 1px solid var(--border-light); background: rgba(12,15,20,0.85); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 50; }
+.topbar { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; border-bottom: 1px solid var(--border-light); background: rgba(12,15,20,0.85); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 50; }
+.ab-entry { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; display: flex; align-items: center; gap: 6px; font-family: inherit; transition: all 0.2s; }
+.ab-entry:hover { border-color: var(--accent); color: var(--accent); }
+.ab-icon { font-size: 0.9rem; }
 .topbar-left { display: flex; align-items: center; gap: 10px; }
 .logo { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .logo-mark { color: var(--accent); }
