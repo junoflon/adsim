@@ -8,8 +8,15 @@ RUN apt-get update \
 
 WORKDIR /app
 
-# Copy everything
+# Copy everything (build context may be repo root OR MiroFish/)
 COPY . .
+
+# Normalize: if we were copied from repo root, MiroFish/ subdir exists — move into it
+RUN if [ -d "/app/MiroFish/frontend" ]; then \
+      echo "Repo-root context detected, flattening MiroFish/"; \
+      mv /app/MiroFish/* /app/MiroFish/.[!.]* /app/ 2>/dev/null || true; \
+      rm -rf /app/MiroFish /app/PRD /app/.git; \
+    fi
 
 # Install frontend deps and build static files
 RUN cd frontend && npm ci && npm run build && ls -la dist/index.html
