@@ -42,3 +42,9 @@ export const getReport = (simId) => api.get(`/simulations/${simId}/report`)
 export const listResponses = (simId) => api.get(`/simulations/${simId}/responses`)
 export const getResponseDetail = (simId, respId) => api.get(`/simulations/${simId}/responses/${respId}`)
 export const listRounds = (simId) => api.get(`/simulations/${simId}/rounds`)
+
+// A/B Comparisons
+export const createComparison = (projectId, data) => api.post(`/projects/${projectId}/comparisons`, data)
+export const listComparisons = (projectId) => api.get(`/projects/${projectId}/comparisons`)
+export const getComparison = (id) => api.get(`/comparisons/${id}`)
+export const deleteComparison = (id) => api.delete(`/comparisons/${id}`)

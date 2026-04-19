@@ -70,6 +70,12 @@ def create_app(config_class=Config):
 
     # AdSim 蓝图
     from .api.adsim import adsim_bp
+    from .database.adsim_db import AdSimDB
+    # 스키마 최신화 (IF NOT EXISTS라 멱등)
+    try:
+        AdSimDB.init_db()
+    except Exception as e:
+        logger.warning(f"AdSim DB 초기화 경고: {e}")
     app.register_blueprint(adsim_bp)
     
     # 健康检查

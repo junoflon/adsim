@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 from ..config import Config
 from ..database.adsim_db import AdSimDB
 from ..services.ad_simulation_service import run_simulation
+from ..services.ad_comparison_service import run_comparison
 
 adsim_bp = Blueprint('adsim', __name__, url_prefix='/api/adsim')
 
@@ -311,3 +312,82 @@ def get_response_detail(simulation_id, response_id):
 @adsim_bp.route('/simulations/<simulation_id>/rounds', methods=['GET'])
 def list_rounds(simulation_id):
     return _ok(AdSimDB.list_rounds(simulation_id))
+
+
+# ── A/B Comparisons ──
+
+@adsim_bp.route('/projects/<project_id>/comparisons', methods=['POST'])
+def create_comparison(project_id):
+    if not AdSimDB.get_project(project_id):
+        return _err("프로젝트를 찾을 수 없습니다", 404)
+    body = request.get_json()
+    if not body:
+        return _err("요청 본문이 비어있습니다")
+    required = ['name', 'persona_id', 'seed_a_id', 'seed_b_id']
+    missing = [k for k in required if not body.get(k)]
+    if missing:
+        return _err(f"필수 필드 누락: {', '.join(missing)}")
+    if body['seed_a_id'] == body['seed_b_id']:
+        return _err("seed_a_id와 seed_b_id는 서로 달라야 합니다")
+
+    seed_a = AdSimDB.get_seed(body['seed_a_id'])
+    seed_b = AdSimDB.get_seed(body['seed_b_id'])
+    if not seed_a or not seed_b:
+        return _err("시드 자료를 찾을 수 없습니다", 404)
+
+    personas = AdSimDB.list_personas(project_id)
+    persona = next((p for p in personas if p['persona_id'] == body['persona_id']), None)
+    if not persona:
+        return _err("페르소나를 찾을 수 없습니다", 404)
+
+    total_rounds = body.get('total_rounds', 4)
+    if not (1 <= total_rounds <= 10):
+        return _err("total_rounds는 1~10 사이여야 합니다")
+    agent_count = body.get('custom_agent_count') or persona['agent_count']
+
+    comparison = AdSimDB.create_comparison(
+        project_id=project_id,
+        name=body['name'],
+        persona_config_id=body['persona_id'],
+        seed_a_id=body['seed_a_id'],
+        seed_b_id=body['seed_b_id'],
+    )
+
+    thread = threading.Thread(
+        target=run_comparison,
+        kwargs={
+            'comparison_id': comparison['comparison_id'],
+            'project_id': project_id,
+            'persona_config': persona,
+            'seed_a': seed_a,
+            'seed_b': seed_b,
+            'total_rounds': total_rounds,
+            'agent_count': agent_count,
+        },
+        daemon=True,
+    )
+    thread.start()
+
+    return _ok(comparison, 202)
+
+
+@adsim_bp.route('/projects/<project_id>/comparisons', methods=['GET'])
+def list_comparisons(project_id):
+    if not AdSimDB.get_project(project_id):
+        return _err("프로젝트를 찾을 수 없습니다", 404)
+    return _ok(AdSimDB.list_comparisons(project_id))
+
+
+@adsim_bp.route('/comparisons/<comparison_id>', methods=['GET'])
+def get_comparison(comparison_id):
+    comparison = AdSimDB.get_comparison(comparison_id)
+    if not comparison:
+        return _err("비교를 찾을 수 없습니다", 404)
+    return _ok(comparison)
+
+
+@adsim_bp.route('/comparisons/<comparison_id>', methods=['DELETE'])
+def delete_comparison(comparison_id):
+    if not AdSimDB.delete_comparison(comparison_id):
+        return _err("비교를 찾을 수 없습니다", 404)
+    return _ok({"deleted": comparison_id})

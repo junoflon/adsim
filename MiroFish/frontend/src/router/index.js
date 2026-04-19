@@ -9,6 +9,7 @@ import AdSimHome from '../views/AdSimHome.vue'
 import AdSimProject from '../views/AdSimProject.vue'
 import AdSimResult from '../views/AdSimResult.vue'
 import AgentChatLog from '../views/AgentChatLog.vue'
+import AdSimCompare from '../views/AdSimCompare.vue'
 
 const routes = [
   {
@@ -67,6 +68,12 @@ const routes = [
     path: '/adsim/simulation/:simulationId/agent/:agentId',
     name: 'AgentChatLog',
     component: AgentChatLog,
+    props: true
+  },
+  {
+    path: '/adsim/project/:projectId/compare',
+    name: 'AdSimCompare',
+    component: AdSimCompare,
     props: true
   }
 ]

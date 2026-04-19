@@ -276,3 +276,75 @@ class AdSimDB:
         d["concerns"] = json.loads(d["concerns"])
         d["recommendations"] = json.loads(d["recommendations"])
         return d
+
+    # ── A/B Comparisons ──
+
+    @classmethod
+    def create_comparison(cls, project_id: str, name: str, persona_config_id: str,
+                          seed_a_id: str, seed_b_id: str) -> Dict[str, Any]:
+        comparison_id = _generate_id("cmp")
+        now = _now()
+        with cls._conn() as conn:
+            conn.execute(
+                "INSERT INTO adsim_ab_comparisons (comparison_id, project_id, name, persona_config_id, seed_a_id, seed_b_id, status, created_at) VALUES (?,?,?,?,?,?,?,?)",
+                (comparison_id, project_id, name, persona_config_id, seed_a_id, seed_b_id, "pending", now)
+            )
+        return {"comparison_id": comparison_id, "project_id": project_id, "name": name,
+                "persona_config_id": persona_config_id, "seed_a_id": seed_a_id, "seed_b_id": seed_b_id,
+                "status": "pending", "created_at": now}
+
+    @classmethod
+    def get_comparison(cls, comparison_id: str) -> Optional[Dict[str, Any]]:
+        with cls._conn() as conn:
+            row = conn.execute("SELECT * FROM adsim_ab_comparisons WHERE comparison_id = ?", (comparison_id,)).fetchone()
+        if not row:
+            return None
+        d = dict(row)
+        if d.get("comparison_result"):
+            d["comparison_result"] = json.loads(d["comparison_result"])
+        return d
+
+    @classmethod
+    def list_comparisons(cls, project_id: str) -> List[Dict[str, Any]]:
+        with cls._conn() as conn:
+            rows = conn.execute("SELECT * FROM adsim_ab_comparisons WHERE project_id = ? ORDER BY created_at DESC", (project_id,)).fetchall()
+        result = []
+        for r in rows:
+            d = dict(r)
+            if d.get("comparison_result"):
+                d["comparison_result"] = json.loads(d["comparison_result"])
+            result.append(d)
+        return result
+
+    @classmethod
+    def update_comparison(cls, comparison_id: str, status: str = None,
+                          simulation_a_id: str = None, simulation_b_id: str = None,
+                          comparison_result: Dict = None):
+        fields = []
+        values = []
+        if status is not None:
+            fields.append("status = ?")
+            values.append(status)
+            if status in ("completed", "failed"):
+                fields.append("completed_at = ?")
+                values.append(_now())
+        if simulation_a_id is not None:
+            fields.append("simulation_a_id = ?")
+            values.append(simulation_a_id)
+        if simulation_b_id is not None:
+            fields.append("simulation_b_id = ?")
+            values.append(simulation_b_id)
+        if comparison_result is not None:
+            fields.append("comparison_result = ?")
+            values.append(json.dumps(comparison_result, ensure_ascii=False))
+        if not fields:
+            return
+        values.append(comparison_id)
+        with cls._conn() as conn:
+            conn.execute(f"UPDATE adsim_ab_comparisons SET {', '.join(fields)} WHERE comparison_id = ?", values)
+
+    @classmethod
+    def delete_comparison(cls, comparison_id: str) -> bool:
+        with cls._conn() as conn:
+            cur = conn.execute("DELETE FROM adsim_ab_comparisons WHERE comparison_id = ?", (comparison_id,))
+        return cur.rowcount > 0
