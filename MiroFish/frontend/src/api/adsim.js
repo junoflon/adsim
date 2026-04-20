@@ -27,6 +27,7 @@ export const deleteSeed = (projectId, seedId) => api.delete(`/projects/${project
 
 // Personas
 export const getPresetPersonas = () => api.get('/personas/presets')
+export const autoGeneratePersona = (payload) => api.post('/personas/auto-generate', payload)
 export const createPersona = (projectId, data) => api.post(`/projects/${projectId}/personas`, data)
 export const listPersonas = (projectId) => api.get(`/projects/${projectId}/personas`)
 export const deletePersona = (projectId, personaId) => api.delete(`/projects/${projectId}/personas/${personaId}`)

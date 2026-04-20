@@ -154,6 +154,63 @@ def get_preset_personas():
     return _ok(PRESET_PERSONAS)
 
 
+@adsim_bp.route('/personas/auto-generate', methods=['POST'])
+def auto_generate_persona():
+    body = request.get_json() or {}
+    description = (body.get('description') or '').strip()
+    if not description:
+        return _err("description을 입력하세요")
+    if len(description) > 400:
+        return _err("description은 400자 이내로 입력하세요")
+
+    # 고정 조건 (사용자가 이미 설정한 값)
+    try:
+        age_min = int(body.get('age_min', 25))
+        age_max = int(body.get('age_max', 40))
+        female_ratio = int(body.get('female_ratio', 50))
+    except (TypeError, ValueError):
+        return _err("age_min, age_max, female_ratio는 정수여야 합니다")
+    age_min = max(10, min(90, age_min))
+    age_max = max(age_min + 1, min(95, age_max))
+    female_ratio = max(0, min(100, female_ratio))
+
+    # 동일 프로젝트 내 기존 페르소나와 중복 회피
+    project_id = body.get('project_id')
+    existing = []
+    if project_id:
+        try:
+            existing = AdSimDB.list_personas(project_id)
+        except Exception:
+            existing = []
+
+    try:
+        from ..utils.llm_client import LLMClient
+        from ..prompts.persona_generator_prompt import create_persona_generation_prompt
+        llm = LLMClient()
+        result = llm.chat_json(
+            messages=[{"role": "user", "content": create_persona_generation_prompt(
+                description=description,
+                age_min=age_min,
+                age_max=age_max,
+                female_ratio=female_ratio,
+                existing_personas=existing,
+            )}],
+            temperature=0.7,
+            max_tokens=800,
+        )
+        return _ok({
+            'name': result.get('name', description[:30]),
+            'age_min': age_min,
+            'age_max': age_max,
+            'female_ratio': female_ratio,
+            'interests': result.get('interests', []),
+            'consumption_habits': result.get('consumption_habits', ''),
+            'personality_tags': result.get('personality_tags', []),
+        })
+    except Exception as e:
+        return _err(f"페르소나 자동 생성 실패: {e}", 500)
+
+
 @adsim_bp.route('/projects/<project_id>/personas', methods=['POST'])
 def create_persona(project_id):
     if not AdSimDB.get_project(project_id):
