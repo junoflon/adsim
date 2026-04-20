@@ -86,7 +86,7 @@
           <span class="row-idx">{{ String(i + 1).padStart(2, '0') }}</span>
           <div class="row-main">
             <div class="row-top">
-              <span class="row-type" :class="p.type">{{ p.type === 'ad_reaction' ? '광고 반응' : 'USP 테스트' }}</span>
+              <span class="row-type" :class="p.type">{{ typeLabel(p.type) }}</span>
               <time>{{ formatDate(p.created_at) }}</time>
             </div>
               <h3 class="row-name">{{ p.name }}</h3>
@@ -128,13 +128,13 @@
               <div class="pick">
                 <button :class="['pick-btn', { on: form.type === 'ad_reaction' }]"
                         @click="form.type = 'ad_reaction'">
-                  <span class="pick-title">광고 반응</span>
-                  <span class="pick-sub">대본/영상 반응 예측</span>
+                  <span class="pick-title">광고 가설</span>
+                  <span class="pick-sub">광고 대본 · 카피에 대한 반응 예측</span>
                 </button>
-                <button :class="['pick-btn', { on: form.type === 'usp_test' }]"
-                        @click="form.type = 'usp_test'">
-                  <span class="pick-title">USP 테스트</span>
-                  <span class="pick-sub">차별점 수용도 테스트</span>
+                <button :class="['pick-btn', { on: form.type === 'product_hypothesis' }]"
+                        @click="form.type = 'product_hypothesis'">
+                  <span class="pick-title">제품 가설</span>
+                  <span class="pick-sub">제품 컨셉 · 기능의 수용도 테스트</span>
                 </button>
               </div>
             </div>
@@ -205,6 +205,12 @@ const handleDelete = async (id) => {
 const scrollToList = () => projectsEl.value?.scrollIntoView({ behavior: 'smooth' })
 
 const formatDate = (d) => d ? new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric' }).format(new Date(d)) : ''
+
+const typeLabel = (t) => ({
+  ad_reaction: '광고 가설',
+  usp_test: 'USP 테스트',
+  product_hypothesis: '제품 가설',
+}[t] || t)
 
 onMounted(loadProjects)
 </script>
@@ -509,8 +515,9 @@ onMounted(loadProjects)
   border: 1px solid var(--rule);
   color: var(--ink-soft);
 }
-.row-type.ad_reaction { border-color: var(--type-a); color: var(--type-a); }
-.row-type.usp_test    { border-color: var(--type-b); color: var(--type-b); }
+.row-type.ad_reaction        { border-color: var(--ink); color: var(--ink); }
+.row-type.usp_test           { border-color: var(--ink-muted); color: var(--ink-muted); }
+.row-type.product_hypothesis { border-color: var(--ink); color: var(--ink); background: var(--paper-sunk); }
 .row-top time {
   font-family: var(--font-mono);
   font-size: 11px;
