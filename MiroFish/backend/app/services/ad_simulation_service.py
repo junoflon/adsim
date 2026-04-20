@@ -16,6 +16,10 @@ from ..prompts.ad_consumer_persona import (
     create_ad_evaluation_user_prompt,
     create_sentiment_analysis_prompt,
 )
+from ..prompts.product_consumer_persona import (
+    create_product_consumer_system_prompt,
+    create_product_evaluation_user_prompt,
+)
 from .persona_manager import generate_agents
 
 logger = get_logger("adsim.simulation")
@@ -26,14 +30,22 @@ def _run_single_agent(
     seed_content: str,
     total_rounds: int,
     llm: LLMClient,
+    seed_type: str = "ad_script",
 ) -> Dict[str, Any]:
     """
     단일 에이전트의 전체 라운드 실행
+    seed_type에 따라 광고/제품 프롬프트 분기
 
     Returns:
         {agent, conversation_log, sentiment, sentiment_score, key_reactions}
     """
-    system_prompt = create_ad_consumer_system_prompt(agent)
+    is_product = seed_type == "product_concept"
+    if is_product:
+        system_prompt = create_product_consumer_system_prompt(agent)
+        make_user_prompt = create_product_evaluation_user_prompt
+    else:
+        system_prompt = create_ad_consumer_system_prompt(agent)
+        make_user_prompt = create_ad_evaluation_user_prompt
     conversation_log = []
     previous_reactions = ""
 
@@ -41,7 +53,7 @@ def _run_single_agent(
     rounds_to_run = min(total_rounds, 4)
 
     for round_num in range(1, rounds_to_run + 1):
-        user_prompt = create_ad_evaluation_user_prompt(
+        user_prompt = make_user_prompt(
             seed_content=seed_content,
             round_number=round_num,
             previous_reactions=previous_reactions if round_num > 1 else None,
@@ -110,6 +122,7 @@ def run_simulation(
     total_rounds: int,
     agent_count: int,
     max_workers: int = 5,
+    seed_type: str = "ad_script",
 ) -> None:
     """
     시뮬레이션 실행 (백그라운드 스레드에서 호출)
@@ -137,7 +150,7 @@ def run_simulation(
 
         def task(agent):
             nonlocal completed
-            result = _run_single_agent(agent, seed_content, total_rounds, llm)
+            result = _run_single_agent(agent, seed_content, total_rounds, llm, seed_type=seed_type)
             with lock:
                 completed += 1
                 # DB 저장

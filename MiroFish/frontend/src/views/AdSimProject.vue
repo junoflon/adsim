@@ -32,18 +32,12 @@
         <div class="panel-head">
           <span class="panel-eyebrow">Step 01</span>
           <h1>무엇을 테스트할까요?</h1>
-          <p class="panel-lede">
-            {{ project.type === 'ad_reaction'
-                 ? '광고 대본을 붙여넣으세요. 텍스트가 구체적일수록 현실적인 반응이 나옵니다.'
-                 : 'USP(제품 차별점)를 입력하세요. 여러 개를 비교하려면 따로 업로드하세요.' }}
-          </p>
+          <p class="panel-lede">{{ ledeText }}</p>
         </div>
 
         <div class="editor">
           <textarea v-model="seedContent"
-                    :placeholder="project.type === 'ad_reaction'
-                      ? '예: [나레이션] 지금까지 이런 맛은 없었다. 제로칼로리인데 진짜 맛있는 ...'
-                      : '예: 제로칼로리인데도 진짜 과일 맛이 나는 유일한 음료'"
+                    :placeholder="placeholderText"
                     rows="10"
                     maxlength="5000"></textarea>
           <div class="editor-foot">
@@ -203,6 +197,24 @@ const steps = [
 
 const canRun = computed(() => seeds.value.length > 0 && selectedPreset.value !== null)
 
+const ledeText = computed(() => {
+  const t = project.value?.type
+  if (t === 'product_hypothesis') return '제품 컨셉을 입력하세요. 타겟에게 실제로 필요한 제품인지 검증합니다.'
+  if (t === 'usp_test') return 'USP(제품 차별점)를 입력하세요. 여러 개를 비교하려면 따로 업로드하세요.'
+  return '광고 대본을 붙여넣으세요. 텍스트가 구체적일수록 현실적인 반응이 나옵니다.'
+})
+const placeholderText = computed(() => {
+  const t = project.value?.type
+  if (t === 'product_hypothesis') return '예: 3분 만에 집에서 만드는 저당 디저트 밀키트. 냉동 보관 7일, 칼로리 150kcal 이하, 1팩 4,900원…'
+  if (t === 'usp_test') return '예: 제로칼로리인데도 진짜 과일 맛이 나는 유일한 음료'
+  return '예: [나레이션] 지금까지 이런 맛은 없었다. 제로칼로리인데 진짜 맛있는 …'
+})
+const seedTypeFor = (t) => {
+  if (t === 'product_hypothesis') return 'product_concept'
+  if (t === 'usp_test') return 'usp_text'
+  return 'ad_script'
+}
+
 onMounted(async () => {
   try {
     const [pRes, sRes, prRes] = await Promise.all([
@@ -218,7 +230,7 @@ const handleUploadSeed = async () => {
   if (!seedContent.value.trim() || uploading.value) return
   uploading.value = true
   try {
-    const seedType = project.value.type === 'ad_reaction' ? 'ad_script' : 'usp_text'
+    const seedType = seedTypeFor(project.value.type)
     await createSeed(projectId, { type: seedType, content: seedContent.value })
     seedContent.value = ''
     seeds.value = (await listSeeds(projectId)).data.data

@@ -83,6 +83,7 @@ def run_comparison(
             "persona_config": persona_config,
             "total_rounds": total_rounds,
             "agent_count": agents,
+            "seed_type": seed_a.get("type", "ad_script"),
         }, daemon=True)
         t_b = threading.Thread(target=run_simulation, kwargs={
             "simulation_id": sim_b["simulation_id"],
@@ -90,6 +91,7 @@ def run_comparison(
             "persona_config": persona_config,
             "total_rounds": total_rounds,
             "agent_count": agents,
+            "seed_type": seed_b.get("type", "ad_script"),
         }, daemon=True)
         t_a.start()
         t_b.start()

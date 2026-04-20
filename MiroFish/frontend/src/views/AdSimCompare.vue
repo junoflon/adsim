@@ -269,8 +269,8 @@ const handleRun = async () => {
     const preset = presets.value[selectedPreset.value]
     const personaRes = await createPersona(projectId, { ...preset, agent_count: agentCount.value, is_preset: true })
     const [seedARes, seedBRes] = await Promise.all([
-      createSeed(projectId, { type: project.value.type === 'ad_reaction' ? 'ad_script' : 'usp_text', content: seedAContent.value }),
-      createSeed(projectId, { type: project.value.type === 'ad_reaction' ? 'ad_script' : 'usp_text', content: seedBContent.value }),
+      createSeed(projectId, { type: project.value.type === 'product_hypothesis' ? 'product_concept' : (project.value.type === 'usp_test' ? 'usp_text' : 'ad_script'), content: seedAContent.value }),
+      createSeed(projectId, { type: project.value.type === 'product_hypothesis' ? 'product_concept' : (project.value.type === 'usp_test' ? 'usp_text' : 'ad_script'), content: seedBContent.value }),
     ])
     const res = await createComparison(projectId, {
       name: compareName.value,

@@ -1,85 +1,72 @@
-/* ── AdSim Design System (Editorial Warm) ─────────────────────────── */
+/* ── AdSim Design System (Monochrome) ─────────────────────────── */
 
 :root {
-  /* Palette — cream paper, deep ink, terracotta accent */
-  --paper:        #f5f1e8;
-  --paper-raised: #fbf8f0;
+  /* Palette — pure monochrome */
+  --paper:        #ffffff;
+  --paper-raised: #fafafa;
   --paper-card:   #ffffff;
-  --paper-sunk:   #efe9dc;
+  --paper-sunk:   #f2f2f2;
 
-  --ink:          #1a1815;
-  --ink-soft:     #3d3a33;
-  --ink-muted:    #6f6a5f;
-  --ink-faint:    #a8a398;
+  --ink:          #0a0a0a;
+  --ink-soft:     #2a2a2a;
+  --ink-muted:    #5a5a5a;
+  --ink-faint:    #9a9a9a;
 
-  --rule:         #e0d9c8;
-  --rule-soft:    #ecE5d3;
+  --rule:         #e5e5e5;
+  --rule-soft:    #efefef;
 
-  --accent:       #c8412e;  /* terracotta / poster red */
-  --accent-hover: #a8341f;
-  --accent-dim:   rgba(200, 65, 46, 0.08);
-  --accent-glow:  rgba(200, 65, 46, 0.18);
+  /* Accent is now pure ink (no color). Highlights use ink for weight. */
+  --accent:       #0a0a0a;
+  --accent-hover: #000000;
+  --accent-dim:   rgba(10, 10, 10, 0.08);
+  --accent-glow:  rgba(10, 10, 10, 0.12);
 
-  --positive:     #3f7a4a;
-  --positive-bg:  #e6ede5;
-  --negative:     #b83a2e;
-  --negative-bg:  #f1dcd7;
-  --neutral:      #8a7f6a;
-  --neutral-bg:   #ebe6d8;
+  /* Sentiment — keep neutral grayscale so charts read clearly */
+  --positive:     #1a1a1a;
+  --positive-bg:  #eaeaea;
+  --negative:     #808080;
+  --negative-bg:  #f2f2f2;
+  --neutral:      #c0c0c0;
+  --neutral-bg:   #f6f6f6;
 
-  --type-a:       #3d5a80;   /* 광고안 A — 잉크 블루 */
-  --type-b:       #8a5a3c;   /* 광고안 B — 번트 오렌지 */
+  /* A vs B tokens — grayscale only */
+  --type-a:       #0a0a0a;
+  --type-b:       #6a6a6a;
 
-  /* Type */
-  --font-display: 'Fraunces', 'Noto Serif KR', 'Times New Roman', serif;
-  --font-body:    'Pretendard Variable', 'Pretendard', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono:    'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
+  /* Type — all Pretendard */
+  --font-display: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif;
+  --font-body:    'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif;
+  --font-mono:    'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, monospace;
 
-  /* Radius + borders */
   --radius-sm: 4px;
   --radius:    6px;
   --radius-lg: 12px;
 
-  /* Spacing scale */
-  --s-1: 4px;
-  --s-2: 8px;
-  --s-3: 12px;
-  --s-4: 16px;
-  --s-5: 24px;
-  --s-6: 32px;
-  --s-7: 48px;
-  --s-8: 72px;
-  --s-9: 120px;
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px;
+  --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 72px; --s-9: 120px;
 }
 
-/* Base */
 * { box-sizing: border-box; }
 html, body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);
-  font-feature-settings: 'ss01', 'ss03';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  font-feature-settings: 'ss01', 'ss02';
 }
 
-/* Selection */
-::selection {
-  background: var(--accent);
-  color: var(--paper-card);
-}
+::selection { background: var(--ink); color: var(--paper); }
 
-/* Scrollbar (subtle) */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: var(--paper); }
 ::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--ink-faint); }
 
-/* Focus ring */
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
 button:focus-visible, a:focus-visible { outline-offset: 3px; }

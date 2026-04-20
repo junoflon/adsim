@@ -32,8 +32,8 @@ def create_project():
     body = request.get_json()
     if not body or not body.get('name') or not body.get('type'):
         return _err("name과 type은 필수입니다")
-    if body['type'] not in ('ad_reaction', 'usp_test'):
-        return _err("type은 ad_reaction 또는 usp_test여야 합니다")
+    if body['type'] not in ('ad_reaction', 'usp_test', 'product_hypothesis'):
+        return _err("type은 ad_reaction, usp_test, product_hypothesis 중 하나여야 합니다")
     project = AdSimDB.create_project(
         name=body['name'],
         project_type=body['type'],
@@ -104,8 +104,8 @@ def create_seed(project_id):
 
     if not content and not file_path:
         return _err("content 또는 file 중 하나는 필수입니다")
-    if seed_type not in ('ad_script', 'usp_text', 'competitor_info'):
-        return _err("type은 ad_script, usp_text, competitor_info 중 하나여야 합니다")
+    if seed_type not in ('ad_script', 'usp_text', 'competitor_info', 'product_concept'):
+        return _err("type은 ad_script, usp_text, competitor_info, product_concept 중 하나여야 합니다")
     if len(content) > 5000:
         return _err("내용이 너무 깁니다. 최대 5000자까지 가능합니다")
 
@@ -231,6 +231,7 @@ def create_simulation(project_id):
             'persona_config': persona,
             'total_rounds': total_rounds,
             'agent_count': agent_count,
+            'seed_type': seed.get('type', 'ad_script'),
         },
         daemon=True
     )
