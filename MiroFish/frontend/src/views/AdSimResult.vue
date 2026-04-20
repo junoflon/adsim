@@ -10,7 +10,14 @@
     <div class="rule-line"></div>
 
     <main class="wrap">
-      <div v-if="!sim" class="state-center">
+      <div v-if="notFound" class="state-center">
+        <span class="panel-eyebrow err">Not Found</span>
+        <h1>시뮬레이션을 찾을 수 없어요</h1>
+        <p>배포나 재시작으로 이 세션이 소실되었을 수 있습니다.<br/>프로젝트 목록에서 새로 시작해주세요.</p>
+        <button class="next-btn" @click="$router.push('/adsim')">프로젝트 목록으로</button>
+      </div>
+
+      <div v-else-if="!sim" class="state-center">
         <span class="dot-pulse"></span>
         <p>불러오는 중…</p>
       </div>
@@ -149,16 +156,25 @@ const progress = computed(() => {
   return Math.round(sim.value.current_round / sim.value.total_rounds * 100)
 })
 
+const notFound = ref(false)
 const load = async () => {
   try {
     sim.value = (await getSimulation(simulationId)).data.data
+    notFound.value = false
     if (sim.value.status === 'completed') {
       if (poll) { clearInterval(poll); poll = null }
       // 독립 fetch: 한쪽이 실패해도 다른 쪽은 살아남도록
       getReport(simulationId).then(r => { report.value = r.data.data }).catch(e => console.error('report load fail', e))
       listResponses(simulationId).then(r => { responses.value = r.data.data.responses || [] }).catch(e => console.error('responses load fail', e))
     } else if (sim.value.status === 'failed' && poll) { clearInterval(poll); poll = null }
-  } catch (e) { console.error(e) }
+  } catch (e) {
+    if (e.response?.status === 404) {
+      notFound.value = true
+      if (poll) { clearInterval(poll); poll = null }
+    } else {
+      console.error(e)
+    }
+  }
 }
 
 const handleCancel = async () => {
