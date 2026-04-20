@@ -31,6 +31,18 @@ class AdSimDB:
             conn.execute("PRAGMA foreign_keys = ON")
             with open(cls.SCHEMA_PATH) as f:
                 conn.executescript(f.read())
+            # 서버 재시작 시 running/pending 상태 시뮬레이션은 프로세스가 죽었으므로 실패로 처리
+            # (백그라운드 스레드가 프로세스 라이프사이클에 묶여 있어 복구 불가)
+            conn.execute(
+                "UPDATE adsim_simulations SET status = 'failed', completed_at = ? "
+                "WHERE status IN ('pending', 'running')",
+                (_now(),)
+            )
+            conn.execute(
+                "UPDATE adsim_ab_comparisons SET status = 'failed', completed_at = ? "
+                "WHERE status IN ('pending', 'running')",
+                (_now(),)
+            )
 
     @classmethod
     def _conn(cls) -> sqlite3.Connection:
