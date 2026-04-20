@@ -4,9 +4,11 @@ MiroFish의 모든 LLM 호출을 Claude로 처리
 """
 
 import json
+import random
 import re
+import time
 from typing import Optional, Dict, Any, List
-from anthropic import Anthropic
+from anthropic import Anthropic, APIError, APIStatusError, RateLimitError, APIConnectionError
 
 from ..config import Config
 
@@ -96,17 +98,36 @@ class LLMClient:
         if system:
             kwargs["system"] = system
 
-        response = self.client.messages.create(**kwargs)
-
-        # Extract text from response
-        content = ""
-        for block in response.content:
-            if hasattr(block, "text"):
-                content += block.text
-
-        # 일부 모델은 <think> 블록을 포함할 수 있음
-        content = re.sub(r"<think>[\s\S]*?</think>", "", content).strip()
-        return content
+        # 지수 백오프 재시도 (rate limit / transient 실패 대응)
+        max_retries = 4
+        last_err: Optional[Exception] = None
+        for attempt in range(max_retries):
+            try:
+                response = self.client.messages.create(**kwargs)
+                content = ""
+                for block in response.content:
+                    if hasattr(block, "text"):
+                        content += block.text
+                content = re.sub(r"<think>[\s\S]*?</think>", "", content).strip()
+                if not content:
+                    raise ValueError("LLM 응답이 비어있습니다")
+                return content
+            except (RateLimitError, APIConnectionError) as e:
+                last_err = e
+                wait = min(30, (2 ** attempt) + random.uniform(0, 1.5))
+                time.sleep(wait)
+            except APIStatusError as e:
+                last_err = e
+                if getattr(e, "status_code", None) in (408, 429, 500, 502, 503, 504):
+                    wait = min(20, (2 ** attempt) + random.uniform(0, 1.5))
+                    time.sleep(wait)
+                else:
+                    raise
+            except APIError as e:
+                last_err = e
+                time.sleep(1 + attempt)
+        # 모든 재시도 실패
+        raise last_err if last_err else RuntimeError("LLM 호출이 여러 차례 실패했습니다")
 
     def chat_json(
         self,

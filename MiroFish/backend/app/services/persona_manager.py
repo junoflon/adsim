@@ -30,14 +30,48 @@ PERSONALITY_POOLS = {
 
 # 직업 풀 (연령대별)
 OCCUPATIONS_BY_AGE = {
-    "20s": ["대학생", "신입사원", "프리랜서", "인턴", "대학원생", "카페 알바"],
-    "30s": ["직장인", "대리", "과장", "프리랜서", "자영업자", "디자이너", "개발자"],
-    "40s": ["팀장", "부장", "자영업자", "주부", "교사", "사업가", "전문직"],
-    "50s": ["부장", "임원", "자영업자", "주부", "교사", "공무원", "전문직"]
+    "20s": ["대학생", "신입사원", "프리랜서 디자이너", "편의점 알바", "대학원생", "바리스타", "콜센터 상담원", "유튜버 지망생", "영업사원", "간호사"],
+    "30s": ["회사원 대리", "마케터", "스타트업 개발자", "자영업자 (카페 운영)", "웨딩플래너", "요가 강사", "중학교 교사", "물류 관리", "플로리스트", "영상 편집자", "변호사 어쏘"],
+    "40s": ["팀장", "부장", "편의점 점주", "주부 (자녀 2)", "학원 강사", "IT 중소기업 임원", "부동산 중개인", "화물차 기사", "간호부장", "공인회계사"],
+    "50s": ["부장", "임원", "자영업자 (식당 운영)", "주부", "공무원 (행정직)", "사업가", "운수업", "은퇴 준비 중", "치과의사"]
 }
 
 # 소득 수준
 INCOME_LEVELS = ["하", "중하", "중", "중상", "상"]
+
+# 라이프 상황 / 맥락 (에이전트 개성 강화)
+LIFE_CONTEXTS = [
+    "최근 이직 준비 중", "혼자 자취 5년 차", "결혼 2년 차, 아이 계획 중", "초등학생 자녀 육아 중",
+    "연애 1년 차", "연애 공백기", "반려견과 동거", "최근 부모님과 독립", "대학 졸업 직전",
+    "이직한 지 3개월", "재택근무 위주", "출퇴근 2시간", "프리랜서로 수입 불안정", "첫 내 집 마련 고민",
+    "최근 건강 이슈로 운동 시작", "다이어트 시도 중", "금연/금주 시도 중", "부업 준비 중",
+    "최근 큰 지출이 있어 아끼는 중", "보너스 받아 여유 있음", "최근 친구가 추천한 제품을 많이 써봄",
+    "SNS 보다가 충동구매 경험 다수", "리뷰 꼼꼼히 읽고 구매하는 편", "경조사 많은 시즌"
+]
+
+# 구매 결정 스타일 (에이전트마다 다르게)
+DECISION_STYLES = [
+    "리뷰·가격비교 철저히 한 뒤 구매",
+    "지인·인플루언서 추천 의존도 높음",
+    "브랜드 익숙하지 않으면 안 삼",
+    "할인·이벤트 중심으로 구매",
+    "패키지·컨셉이 예쁘면 지갑 열림",
+    "성분·기능 스펙 꼼꼼히 확인",
+    "기분 내키면 즉시 구매 후 후회도 함",
+    "중고·당근에서 먼저 찾아보는 편"
+]
+
+# 어투 스타일 힌트
+SPEAKING_STYLES = [
+    "직설적이고 간결하게 말함",
+    "완곡하게 돌려서 말함",
+    "감정 표현이 풍부함",
+    "논리적 근거를 먼저 댐",
+    "비유를 자주 씀",
+    "짧게 답하는 편",
+    "세부 디테일에 집착",
+    "솔직하지만 공격적이지 않게"
+]
 
 
 def _get_age_bucket(age: int) -> str:
@@ -162,6 +196,10 @@ def generate_agents(persona_config: Dict[str, Any], count: int) -> List[Dict[str
         else:
             income = random.choice(["중", "중상", "중상", "상"])
 
+        life_ctx = random.choice(LIFE_CONTEXTS)
+        decision_style = random.choice(DECISION_STYLES)
+        speaking = random.choice(SPEAKING_STYLES)
+
         agents.append({
             "agent_id": i + 1,
             "name": name,
@@ -171,7 +209,10 @@ def generate_agents(persona_config: Dict[str, Any], count: int) -> List[Dict[str
             "income_level": income,
             "interests": interests,
             "personality_traits": personality,
-            "shopping_habits": consumption or f"{bucket} 일반 소비자"
+            "shopping_habits": consumption or f"{bucket} 일반 소비자",
+            "life_context": life_ctx,
+            "decision_style": decision_style,
+            "speaking_style": speaking,
         })
 
     return agents
