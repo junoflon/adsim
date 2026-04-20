@@ -84,6 +84,7 @@ def generate_report(
             concerns=analysis.get("concerns", []),
             recommendations=analysis.get("recommendations", []),
             full_report_text=analysis.get("full_report_text", ""),
+            script_analysis=analysis.get("script_analysis"),
         )
 
         logger.info(f"보고서 생성 완료: {report['report_id']}")
