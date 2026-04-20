@@ -106,6 +106,25 @@
 
         <!-- Custom mode -->
         <div v-else class="custom-panel">
+          <!-- AI auto-fill -->
+          <div class="ai-gen">
+            <label class="ai-label">
+              <span class="ai-tag">AI</span>
+              한 줄로 타겟을 묘사하면 나머지 필드를 자동으로 채워드려요.
+            </label>
+            <p class="ai-hint">※ 연령대·성별 비율은 아래 설정을 그대로 사용합니다. 같은 프로젝트 내 기존 페르소나와 겹치지 않게 작성됩니다.</p>
+            <div class="ai-row">
+              <input type="text" v-model="aiDescription"
+                     placeholder="예: 편의점에서 음료 자주 사는 2030 직장인"
+                     maxlength="200"
+                     @keydown.enter.prevent="handleAutoGenerate" />
+              <button type="button" class="ai-btn" :disabled="!aiDescription.trim() || aiGenerating" @click="handleAutoGenerate">
+                <span v-if="aiGenerating" class="spin"></span>
+                <span v-else>자동 작성</span>
+              </button>
+            </div>
+          </div>
+
           <div class="cfield">
             <label>페르소나 이름</label>
             <input type="text" v-model="customPersona.name" placeholder="예: 3040 퇴근 후 편의점 애용층" maxlength="40" />
@@ -245,7 +264,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getProject, listSeeds, createSeed, deleteSeed, getPresetPersonas, createPersona, startSimulation } from '../api/adsim.js'
+import { getProject, listSeeds, createSeed, deleteSeed, getPresetPersonas, createPersona, startSimulation, autoGeneratePersona } from '../api/adsim.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -269,6 +288,8 @@ const steps = [
 
 const personaMode = ref('preset') // 'preset' | 'custom'
 const newInterest = ref('')
+const aiDescription = ref('')
+const aiGenerating = ref(false)
 const customPersona = ref({
   name: '',
   ageMin: 25,
@@ -325,6 +346,28 @@ const addCustomInterest = () => {
   const v = newInterest.value.trim()
   if (v && !customPersona.value.interests.includes(v)) customPersona.value.interests.push(v)
   newInterest.value = ''
+}
+const handleAutoGenerate = async () => {
+  const desc = aiDescription.value.trim()
+  if (!desc || aiGenerating.value) return
+  aiGenerating.value = true
+  try {
+    const res = await autoGeneratePersona({
+      description: desc,
+      age_min: customPersona.value.ageMin,
+      age_max: customPersona.value.ageMax,
+      female_ratio: customPersona.value.femaleRatio,
+      project_id: projectId,
+    })
+    const g = res.data.data
+    // 연령/성별은 사용자 값 유지, 나머지만 덮어쓰기
+    customPersona.value.name = g.name || customPersona.value.name
+    customPersona.value.interests = Array.isArray(g.interests) ? g.interests : customPersona.value.interests
+    customPersona.value.consumption_habits = g.consumption_habits || customPersona.value.consumption_habits
+    customPersona.value.personalityTags = Array.isArray(g.personality_tags) ? g.personality_tags : customPersona.value.personalityTags
+  } catch (e) {
+    alert('자동 작성 실패: ' + (e.response?.data?.error || e.message))
+  } finally { aiGenerating.value = false }
 }
 const personaReady = computed(() => {
   if (personaMode.value === 'preset') return selectedPreset.value !== null
@@ -714,6 +757,81 @@ const handleRun = async () => {
   text-underline-offset: 3px;
 }
 .link-btn:hover { color: var(--accent); }
+
+/* ─ AI auto-generate block ─ */
+.ai-gen {
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
+  margin-bottom: 28px;
+}
+.ai-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: var(--paper);
+}
+.ai-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  padding: 2px 8px;
+  border: 1px solid var(--paper);
+  border-radius: 99px;
+}
+.ai-hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+.ai-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+.ai-row input {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--paper);
+  padding: 11px 14px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  border-radius: var(--radius);
+  outline: none;
+  transition: all 0.2s;
+}
+.ai-row input::placeholder { color: rgba(255, 255, 255, 0.4); }
+.ai-row input:focus {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--paper);
+}
+.ai-btn {
+  background: var(--paper);
+  color: var(--ink);
+  border: none;
+  padding: 11px 20px;
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ai-btn:hover:not(:disabled) { background: var(--paper-sunk); }
+.ai-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.ai-btn .spin {
+  border-color: rgba(10, 10, 10, 0.2);
+  border-top-color: var(--ink);
+}
 
 /* ─ Custom persona panel ─ */
 .custom-panel {
