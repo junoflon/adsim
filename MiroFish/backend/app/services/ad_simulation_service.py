@@ -31,6 +31,7 @@ def _run_single_agent(
     total_rounds: int,
     llm: LLMClient,
     seed_type: str = "ad_script",
+    platform: str = "unspecified",
 ) -> Dict[str, Any]:
     """
     단일 에이전트의 전체 라운드 실행
@@ -53,11 +54,14 @@ def _run_single_agent(
     rounds_to_run = min(total_rounds, 4)
 
     for round_num in range(1, rounds_to_run + 1):
-        user_prompt = make_user_prompt(
-            seed_content=seed_content,
-            round_number=round_num,
-            previous_reactions=previous_reactions if round_num > 1 else None,
-        )
+        kwargs = {
+            "seed_content": seed_content,
+            "round_number": round_num,
+            "previous_reactions": previous_reactions if round_num > 1 else None,
+        }
+        if not is_product:
+            kwargs["platform"] = platform
+        user_prompt = make_user_prompt(**kwargs)
 
         # 이전 대화 이력도 함께 전달
         messages = [{"role": "system", "content": system_prompt}]
@@ -123,6 +127,7 @@ def run_simulation(
     agent_count: int,
     max_workers: int = 3,
     seed_type: str = "ad_script",
+    platform: str = "unspecified",
 ) -> None:
     """
     시뮬레이션 실행 (백그라운드 스레드에서 호출)
@@ -150,7 +155,7 @@ def run_simulation(
 
         def task(agent):
             nonlocal completed
-            result = _run_single_agent(agent, seed_content, total_rounds, llm, seed_type=seed_type)
+            result = _run_single_agent(agent, seed_content, total_rounds, llm, seed_type=seed_type, platform=platform)
             with lock:
                 completed += 1
                 # DB 저장

@@ -65,10 +65,27 @@ def create_ad_consumer_system_prompt(agent: Dict[str, Any]) -> str:
 """
 
 
+PLATFORM_CONTEXTS = {
+    "meta_feed": "인스타그램/페이스북 피드 스크롤 중에 스폰서 광고로 마주친 상황. 주변이 친구/인플루언서 콘텐츠라 2~3초 안에 결정해야 함. 자극적이거나 감성적인 비주얼이 잘 멈추게 함.",
+    "meta_reels": "인스타 릴스/페이스북 릴스 영상을 몰입해서 보다가 중간에 뜬 광고. 세로 영상 포맷. 첫 1초의 훅이 핵심.",
+    "google_search": "구글/네이버 검색 결과 상단에 뜬 검색 광고. 이미 특정 의도를 가지고 검색한 상태.",
+    "youtube_preroll": "유튜브 영상 보려고 클릭했는데 앞에 뜬 프리롤 광고. 5초 뒤 건너뛰기 가능. 초반 5초가 전부.",
+    "youtube_inline": "유튜브 영상 중간에 나온 미드롤 광고. 관심 있는 콘텐츠 보는 중이라 인내심 낮음.",
+    "naver_feed": "네이버 메인/쇼핑/검색 결과에 삽입된 디스플레이 광고. 한국적 신뢰감 중시.",
+    "tiktok": "틱톡 For You 피드에 섞인 광고. Z세대 감성. 완전히 콘텐츠처럼 보여야 먹힘.",
+    "tv_cf": "TV CF로 거실에서 가족과 함께 본 상황. 15~30초 고정 포맷. 불특정 다수 대상.",
+    "kakao": "카카오톡 친구탭/쇼핑 상단에 뜬 광고. 일상 메신저 앱 안에서 접함.",
+    "web_article": "뉴스/블로그 기사 본문 중간 삽입된 네이티브 광고. 기사 읽다가 방해받는 느낌.",
+    "offline": "옥외 광고/매장 내 POP/전단지 같은 오프라인 접점.",
+    "unspecified": "일반적인 노출 상황",
+}
+
+
 def create_ad_evaluation_user_prompt(
     seed_content: str,
     round_number: int,
-    previous_reactions: Optional[str] = None
+    previous_reactions: Optional[str] = None,
+    platform: Optional[str] = None,
 ) -> str:
     """
     라운드별 광고 평가 프롬프트
@@ -77,13 +94,18 @@ def create_ad_evaluation_user_prompt(
     if previous_reactions:
         context = f"\n[이전 당신의 반응 요약]\n{previous_reactions}\n"
 
+    platform_block = ""
+    if platform and platform in PLATFORM_CONTEXTS and platform != "unspecified":
+        platform_block = f"\n[노출 상황]\n{PLATFORM_CONTEXTS[platform]}\n이 맥락을 고려해 반응하세요.\n"
+
     if round_number == 1:
         return f"""[광고 내용]
 {seed_content}
-
+{platform_block}
 위 광고를 처음 본 당신의 솔직한 첫인상을 말해주세요.
 - 어떤 느낌이 드나요?
 - 눈에 띄는 장점 또는 걸리는 부분이 있나요?
+- 이 노출 상황에서 실제로 당신이 어떻게 행동할지 (넘긴다/본다/누른다)
 {context}"""
 
     elif round_number == 2:
