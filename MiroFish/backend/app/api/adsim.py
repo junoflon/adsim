@@ -14,7 +14,8 @@ from ..services.ad_comparison_service import run_comparison
 
 adsim_bp = Blueprint('adsim', __name__, url_prefix='/api/adsim')
 
-ALLOWED_EXTENSIONS = {'pdf', 'txt', 'md'}
+ALLOWED_EXTENSIONS = {'pdf', 'txt', 'md', 'docx', 'hwp', 'hwpx'}
+MAX_CONTENT_CHARS = 20000
 
 
 def _ok(data, status=200):
@@ -32,8 +33,8 @@ def create_project():
     body = request.get_json()
     if not body or not body.get('name') or not body.get('type'):
         return _err("name과 type은 필수입니다")
-    if body['type'] not in ('ad_reaction', 'usp_test', 'product_hypothesis'):
-        return _err("type은 ad_reaction, usp_test, product_hypothesis 중 하나여야 합니다")
+    if body['type'] not in ('ad_reaction', 'usp_test', 'product_hypothesis', 'brand_hypothesis'):
+        return _err("type은 ad_reaction, usp_test, product_hypothesis, brand_hypothesis 중 하나여야 합니다")
     project = AdSimDB.create_project(
         name=body['name'],
         project_type=body['type'],
@@ -72,42 +73,47 @@ def create_seed(project_id):
     content = ""
     file_path = ""
     file_size = 0
+    reference_url = ""
 
     if request.content_type and 'multipart/form-data' in request.content_type:
         seed_type = request.form.get('type', 'ad_script')
         content = request.form.get('content', '')
+        reference_url = (request.form.get('reference_url') or '').strip()
         file = request.files.get('file')
         if file and file.filename:
             filename = secure_filename(file.filename)
             ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
             if ext not in ALLOWED_EXTENSIONS:
-                return _err(f"허용되지 않는 파일 형식입니다. 허용: {ALLOWED_EXTENSIONS}")
+                return _err(f"허용되지 않는 파일 형식입니다. 허용: {sorted(ALLOWED_EXTENSIONS)}")
             upload_dir = os.path.join(Config.UPLOAD_FOLDER, 'adsim', project_id)
             os.makedirs(upload_dir, exist_ok=True)
             file_path = os.path.join(upload_dir, filename)
             file.save(file_path)
             file_size = os.path.getsize(file_path)
-            if ext == 'pdf':
-                try:
-                    import fitz
-                    doc = fitz.open(file_path)
-                    content = "\n".join(page.get_text() for page in doc)
-                    doc.close()
-                except Exception:
-                    pass
+            # 파일에서 텍스트 추출
+            from ..utils.file_extractor import extract_text
+            extracted = extract_text(file_path, max_chars=MAX_CONTENT_CHARS)
+            if extracted:
+                # 유저 직접 입력 + 파일 텍스트를 함께 합쳐 저장
+                content = ((content + "\n\n") if content else "") + f"[첨부 파일: {filename}]\n{extracted}"
     else:
         body = request.get_json()
         if not body:
             return _err("요청 본문이 비어있습니다")
         seed_type = body.get('type', 'ad_script')
         content = body.get('content', '')
+        reference_url = (body.get('reference_url') or '').strip()
+
+    # 참조 URL(노션/구글독스 등)이 있으면 내용에 병합
+    if reference_url:
+        content = ((content + "\n\n") if content else "") + f"[참조 링크]\n{reference_url}\n(위 페이지 내용도 함께 고려해 주세요.)"
 
     if not content and not file_path:
-        return _err("content 또는 file 중 하나는 필수입니다")
-    if seed_type not in ('ad_script', 'usp_text', 'competitor_info', 'product_concept'):
-        return _err("type은 ad_script, usp_text, competitor_info, product_concept 중 하나여야 합니다")
-    if len(content) > 5000:
-        return _err("내용이 너무 깁니다. 최대 5000자까지 가능합니다")
+        return _err("content, file, reference_url 중 하나는 필수입니다")
+    if seed_type not in ('ad_script', 'usp_text', 'competitor_info', 'product_concept', 'brand_concept'):
+        return _err("type은 ad_script, usp_text, competitor_info, product_concept, brand_concept 중 하나여야 합니다")
+    if len(content) > MAX_CONTENT_CHARS:
+        content = content[:MAX_CONTENT_CHARS]
 
     seed = AdSimDB.create_seed(
         project_id=project_id,

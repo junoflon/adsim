@@ -125,16 +125,21 @@
 
             <div class="field">
               <label>테스트 종류</label>
-              <div class="pick">
+              <div class="pick pick-3">
                 <button :class="['pick-btn', { on: form.type === 'ad_reaction' }]"
                         @click="form.type = 'ad_reaction'">
                   <span class="pick-title">광고 가설</span>
-                  <span class="pick-sub">광고 대본 · 카피에 대한 반응 예측</span>
+                  <span class="pick-sub">광고 대본 · 카피 반응 예측. 매체별 분석.</span>
                 </button>
                 <button :class="['pick-btn', { on: form.type === 'product_hypothesis' }]"
                         @click="form.type = 'product_hypothesis'">
                   <span class="pick-title">제품 가설</span>
-                  <span class="pick-sub">제품 컨셉 · 기능의 수용도 테스트</span>
+                  <span class="pick-sub">제품 컨셉·기능·가격의 수용도. PDF/HWP 지원.</span>
+                </button>
+                <button :class="['pick-btn', { on: form.type === 'brand_hypothesis' }]"
+                        @click="form.type = 'brand_hypothesis'">
+                  <span class="pick-title">브랜드 가설</span>
+                  <span class="pick-sub">브랜드 포지셔닝·스토리 공감도. 노션 링크/PDF.</span>
                 </button>
               </div>
             </div>
@@ -210,6 +215,7 @@ const typeLabel = (t) => ({
   ad_reaction: '광고 가설',
   usp_test: 'USP 테스트',
   product_hypothesis: '제품 가설',
+  brand_hypothesis: '브랜드 가설',
 }[t] || t)
 
 onMounted(loadProjects)
@@ -670,6 +676,7 @@ onMounted(loadProjects)
 .field textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 
 .pick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pick.pick-3 { grid-template-columns: 1fr 1fr 1fr; }
 .pick-btn {
   background: var(--paper-card);
   border: 1px solid var(--rule);

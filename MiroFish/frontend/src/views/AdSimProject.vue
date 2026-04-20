@@ -38,16 +38,37 @@
         <div class="editor">
           <textarea v-model="seedContent"
                     :placeholder="placeholderText"
-                    rows="10"
-                    maxlength="5000"></textarea>
+                    rows="8"
+                    maxlength="20000"></textarea>
           <div class="editor-foot">
-            <span class="char-n" :class="{ warn: seedContent.length > 4500 }">
-              {{ seedContent.length.toLocaleString() }} / 5,000
+            <span class="char-n" :class="{ warn: seedContent.length > 18000 }">
+              {{ seedContent.length.toLocaleString() }} / 20,000
             </span>
-            <button class="add-btn" :disabled="!seedContent.trim() || uploading" @click="handleUploadSeed">
+            <button class="add-btn" :disabled="!canUpload || uploading" @click="handleUploadSeed">
               <span v-if="uploading" class="spin"></span>
               <span v-else>{{ seeds.length > 0 ? '+ 추가 업로드' : '업로드하기' }}</span>
             </button>
+          </div>
+        </div>
+
+        <!-- 첨부 파일 & 참조 링크 (제품/브랜드 가설만) -->
+        <div class="attach-block" v-if="supportsAttachments">
+          <div class="attach-row">
+            <label class="attach-file">
+              <input type="file" accept=".pdf,.hwp,.hwpx,.docx,.txt,.md" @change="onFilePick" />
+              <span class="attach-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                {{ attachedFile ? attachedFile.name : '파일 첨부 (PDF · HWP · DOCX)' }}
+              </span>
+              <button v-if="attachedFile" type="button" class="attach-clear" @click.prevent="clearFile">✕</button>
+            </label>
+          </div>
+          <div class="attach-row" v-if="project.type === 'brand_hypothesis'">
+            <label class="attach-url">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.72M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.72-1.72"/></svg>
+              <input type="url" v-model="referenceUrl"
+                     placeholder="노션 · 구글 독스 · Figma 등 참조 링크 (선택)" />
+            </label>
           </div>
         </div>
 
@@ -242,8 +263,8 @@
           </div>
         </dl>
 
-        <!-- Platform selection -->
-        <div class="platform-card">
+        <!-- Platform selection — 광고 가설에서만 -->
+        <div class="platform-card" v-if="supportsPlatform">
           <label class="platform-label">이 광고가 노출될 매체</label>
           <p class="platform-sub">같은 대본도 매체에 따라 반응이 달라집니다. 노출 맥락을 선택하세요.</p>
           <div class="platform-grid">
@@ -411,21 +432,37 @@ const activePersonaSummary = computed(() => {
 
 const ledeText = computed(() => {
   const t = project.value?.type
-  if (t === 'product_hypothesis') return '제품 컨셉을 입력하세요. 타겟에게 실제로 필요한 제품인지 검증합니다.'
+  if (t === 'brand_hypothesis') return '브랜드 기획서·스토리·비주얼 자료를 올려주세요. 문서를 정성스럽게 읽고 타겟 공감도를 평가합니다.'
+  if (t === 'product_hypothesis') return '제품 컨셉·기획서·스펙 문서를 올려주세요. 타겟에게 실제로 필요한 제품인지 검증합니다.'
   if (t === 'usp_test') return 'USP(제품 차별점)를 입력하세요. 여러 개를 비교하려면 따로 업로드하세요.'
   return '광고 대본을 붙여넣으세요. 텍스트가 구체적일수록 현실적인 반응이 나옵니다.'
 })
 const placeholderText = computed(() => {
   const t = project.value?.type
-  if (t === 'product_hypothesis') return '예: 3분 만에 집에서 만드는 저당 디저트 밀키트. 냉동 보관 7일, 칼로리 150kcal 이하, 1팩 4,900원…'
+  if (t === 'brand_hypothesis') return '브랜드 핵심 메시지·스토리·톤앤매너를 간단히 설명하거나, 기획서 파일을 첨부해도 돼요.\n예: "느리지만 진심을 다하는 로컬 카페 브랜드. 원두는 ○○농장 직거래…"'
+  if (t === 'product_hypothesis') return '제품 컨셉을 설명하거나 기획서를 첨부하세요.\n예: 3분 만에 집에서 만드는 저당 디저트 밀키트. 냉동 보관 7일, 칼로리 150kcal 이하, 1팩 4,900원…'
   if (t === 'usp_test') return '예: 제로칼로리인데도 진짜 과일 맛이 나는 유일한 음료'
   return '예: [나레이션] 지금까지 이런 맛은 없었다. 제로칼로리인데 진짜 맛있는 …'
 })
 const seedTypeFor = (t) => {
+  if (t === 'brand_hypothesis') return 'brand_concept'
   if (t === 'product_hypothesis') return 'product_concept'
   if (t === 'usp_test') return 'usp_text'
   return 'ad_script'
 }
+const supportsAttachments = computed(() => {
+  const t = project.value?.type
+  return t === 'product_hypothesis' || t === 'brand_hypothesis'
+})
+const supportsPlatform = computed(() => project.value?.type === 'ad_reaction')
+const attachedFile = ref(null)
+const referenceUrl = ref('')
+const onFilePick = (e) => {
+  const f = e.target.files?.[0]
+  attachedFile.value = f || null
+}
+const clearFile = () => { attachedFile.value = null }
+const canUpload = computed(() => seedContent.value.trim() || attachedFile.value || referenceUrl.value.trim())
 
 onMounted(async () => {
   try {
@@ -439,12 +476,23 @@ onMounted(async () => {
 })
 
 const handleUploadSeed = async () => {
-  if (!seedContent.value.trim() || uploading.value) return
+  if (!canUpload.value || uploading.value) return
   uploading.value = true
   try {
     const seedType = seedTypeFor(project.value.type)
-    await createSeed(projectId, { type: seedType, content: seedContent.value })
+    if (attachedFile.value || referenceUrl.value.trim()) {
+      const fd = new FormData()
+      fd.append('type', seedType)
+      if (seedContent.value.trim()) fd.append('content', seedContent.value)
+      if (attachedFile.value) fd.append('file', attachedFile.value)
+      if (referenceUrl.value.trim()) fd.append('reference_url', referenceUrl.value.trim())
+      await createSeed(projectId, fd)
+    } else {
+      await createSeed(projectId, { type: seedType, content: seedContent.value })
+    }
     seedContent.value = ''
+    attachedFile.value = null
+    referenceUrl.value = ''
     seeds.value = (await listSeeds(projectId)).data.data
   } catch (e) {
     alert('업로드 실패: ' + (e.response?.data?.error || e.message))
@@ -478,12 +526,13 @@ const handleRun = async () => {
       }
     }
     const personaRes = await createPersona(projectId, personaPayload)
-    const simRes = await startSimulation(projectId, {
+    const simPayload = {
       seed_id: seeds.value[0].seed_id,
       persona_id: personaRes.data.data.persona_id,
       total_rounds: totalRounds.value,
-      platform: selectedPlatform.value,
-    })
+    }
+    if (supportsPlatform.value) simPayload.platform = selectedPlatform.value
+    const simRes = await startSimulation(projectId, simPayload)
     router.push(`/adsim/simulation/${simRes.data.data.simulation_id}`)
   } catch (e) {
     alert('시작 실패: ' + (e.response?.data?.error || e.message))
@@ -694,6 +743,89 @@ const handleRun = async () => {
 }
 .add-btn:hover:not(:disabled) { background: var(--accent); }
 .add-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ─ Attachments block ─ */
+.attach-block {
+  margin-bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.attach-row { display: flex; }
+.attach-file {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  position: relative;
+}
+.attach-file input[type="file"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0.1px;
+  height: 0.1px;
+}
+.attach-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px;
+  border: 1.5px dashed var(--rule);
+  border-radius: var(--radius);
+  color: var(--ink-muted);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+  background: var(--paper-raised);
+}
+.attach-file:hover .attach-btn {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: var(--paper-card);
+}
+.attach-btn svg { flex-shrink: 0; }
+.attach-clear {
+  background: none;
+  border: 1px solid var(--rule);
+  color: var(--ink-muted);
+  border-radius: 50%;
+  width: 26px; height: 26px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.attach-clear:hover { border-color: var(--ink); color: var(--ink); }
+
+.attach-url {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  transition: all 0.2s;
+}
+.attach-url:focus-within { border-color: var(--ink); background: var(--paper-card); }
+.attach-url svg { color: var(--ink-muted); flex-shrink: 0; }
+.attach-url input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink);
+}
+.attach-url input::placeholder { color: var(--ink-faint); }
 
 /* ─ Seed list ─ */
 .seed-list {
