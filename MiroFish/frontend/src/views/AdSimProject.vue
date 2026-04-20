@@ -242,6 +242,20 @@
           </div>
         </dl>
 
+        <!-- Platform selection -->
+        <div class="platform-card">
+          <label class="platform-label">이 광고가 노출될 매체</label>
+          <p class="platform-sub">같은 대본도 매체에 따라 반응이 달라집니다. 노출 맥락을 선택하세요.</p>
+          <div class="platform-grid">
+            <button v-for="p in platforms" :key="p.key" type="button"
+                    :class="['plat', { on: selectedPlatform === p.key }]"
+                    @click="selectedPlatform = p.key">
+              <span class="plat-name">{{ p.name }}</span>
+              <span class="plat-sub">{{ p.sub }}</span>
+            </button>
+          </div>
+        </div>
+
         <button class="go-btn" :disabled="!canRun || running" @click="handleRun">
           <span v-if="running" class="spin"></span>
           <template v-else>
@@ -277,6 +291,21 @@ const seedContent = ref('')
 const selectedPreset = ref(null)
 const agentCount = ref(30)
 const totalRounds = ref(30)
+const selectedPlatform = ref('unspecified')
+const platforms = [
+  { key: 'meta_feed', name: 'Meta 피드', sub: 'Instagram / Facebook 피드 광고' },
+  { key: 'meta_reels', name: 'Meta 릴스', sub: 'Instagram / Facebook 릴스' },
+  { key: 'youtube_preroll', name: 'YouTube 프리롤', sub: '영상 재생 전 5초 건너뛰기 광고' },
+  { key: 'youtube_inline', name: 'YouTube 중간', sub: '영상 중간 미드롤 광고' },
+  { key: 'google_search', name: 'Google 검색', sub: '검색 결과 상단 검색 광고' },
+  { key: 'naver_feed', name: '네이버', sub: '네이버 메인 / 쇼핑 / 검색 디스플레이' },
+  { key: 'tiktok', name: 'TikTok', sub: 'For You 피드 인피드 광고' },
+  { key: 'kakao', name: '카카오톡', sub: '친구탭 / 쇼핑 상단 노출' },
+  { key: 'tv_cf', name: 'TV CF', sub: '지상파/케이블 15~30초 CF' },
+  { key: 'web_article', name: '기사/블로그', sub: '뉴스/블로그 본문 중간 네이티브' },
+  { key: 'offline', name: '오프라인', sub: '옥외/매장 POP/전단지' },
+  { key: 'unspecified', name: '매체 미지정', sub: '일반적인 노출 상황' },
+]
 const currentStep = ref(0)
 const uploading = ref(false)
 const running = ref(false)
@@ -452,7 +481,8 @@ const handleRun = async () => {
     const simRes = await startSimulation(projectId, {
       seed_id: seeds.value[0].seed_id,
       persona_id: personaRes.data.data.persona_id,
-      total_rounds: totalRounds.value
+      total_rounds: totalRounds.value,
+      platform: selectedPlatform.value,
     })
     router.push(`/adsim/simulation/${simRes.data.data.simulation_id}`)
   } catch (e) {
@@ -1135,6 +1165,63 @@ const handleRun = async () => {
 }
 .round-control button:hover { border-color: var(--accent); color: var(--accent); }
 .round-control span { min-width: 28px; text-align: center; }
+
+/* ─ Platform picker ─ */
+.platform-card {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  padding: 24px 26px;
+  margin-bottom: 22px;
+}
+.platform-label {
+  display: block;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.platform-sub {
+  font-size: 13px;
+  color: var(--ink-muted);
+  margin: 0 0 18px;
+  line-height: 1.5;
+}
+.platform-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+.plat {
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-body);
+  color: var(--ink);
+  transition: all 0.15s;
+}
+.plat:hover { border-color: var(--ink-muted); }
+.plat.on {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+.plat-name {
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+.plat-sub {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-muted);
+  line-height: 1.4;
+}
+.plat.on .plat-sub { color: rgba(255,255,255,0.6); }
 
 /* ─ Go button ─ */
 .go-btn {

@@ -263,6 +263,14 @@ def create_simulation(project_id):
     if not (5 <= total_rounds <= 50):
         return _err("total_rounds는 5~50 사이여야 합니다")
 
+    platform = body.get('platform') or 'unspecified'
+    ALLOWED_PLATFORMS = {
+        'meta_feed', 'meta_reels', 'google_search', 'youtube_preroll', 'youtube_inline',
+        'naver_feed', 'tiktok', 'tv_cf', 'kakao', 'web_article', 'offline', 'unspecified'
+    }
+    if platform not in ALLOWED_PLATFORMS:
+        return _err(f"platform은 {sorted(ALLOWED_PLATFORMS)} 중 하나여야 합니다")
+
     simulation = AdSimDB.create_simulation(
         project_id=project_id,
         persona_config_id=body['persona_id'],
@@ -289,6 +297,7 @@ def create_simulation(project_id):
             'total_rounds': total_rounds,
             'agent_count': agent_count,
             'seed_type': seed.get('type', 'ad_script'),
+            'platform': platform,
         },
         daemon=True
     )
