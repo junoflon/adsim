@@ -20,6 +20,10 @@ from ..prompts.product_consumer_persona import (
     create_product_consumer_system_prompt,
     create_product_evaluation_user_prompt,
 )
+from ..prompts.brand_consumer_persona import (
+    create_brand_consumer_system_prompt,
+    create_brand_evaluation_user_prompt,
+)
 from .persona_manager import generate_agents
 
 logger = get_logger("adsim.simulation")
@@ -41,7 +45,11 @@ def _run_single_agent(
         {agent, conversation_log, sentiment, sentiment_score, key_reactions}
     """
     is_product = seed_type == "product_concept"
-    if is_product:
+    is_brand = seed_type == "brand_concept"
+    if is_brand:
+        system_prompt = create_brand_consumer_system_prompt(agent)
+        make_user_prompt = create_brand_evaluation_user_prompt
+    elif is_product:
         system_prompt = create_product_consumer_system_prompt(agent)
         make_user_prompt = create_product_evaluation_user_prompt
     else:
@@ -59,7 +67,8 @@ def _run_single_agent(
             "round_number": round_num,
             "previous_reactions": previous_reactions if round_num > 1 else None,
         }
-        if not is_product:
+        # 매체 맥락은 광고(ad) 타입에만 적용. 제품/브랜드는 매체 개념이 약함
+        if not is_product and not is_brand:
             kwargs["platform"] = platform
         user_prompt = make_user_prompt(**kwargs)
 
