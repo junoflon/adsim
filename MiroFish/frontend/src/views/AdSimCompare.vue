@@ -1,164 +1,227 @@
 <template>
-  <div class="adsim-compare">
+  <div class="page">
     <header class="topbar">
-      <div class="topbar-left">
-        <div class="logo" @click="$router.push('/adsim')">
-          <span class="logo-mark">◆</span>
-          <span class="logo-text">AdSim</span>
-        </div>
-        <span class="breadcrumb-sep">/</span>
-        <span class="breadcrumb-link" @click="$router.push(`/adsim/project/${projectId}`)">{{ project?.name || '프로젝트' }}</span>
-        <span class="breadcrumb-sep">/</span>
-        <span class="breadcrumb-current">A/B 비교</span>
+      <div class="bar-left">
+        <span class="brand" @click="$router.push('/adsim')">AdSim</span>
+        <span class="bar-sep">/</span>
+        <span class="bar-link" @click="$router.push(`/adsim/project/${projectId}`)">{{ project?.name || '프로젝트' }}</span>
+        <span class="bar-sep">/</span>
+        <span class="bar-crumb">A/B 비교</span>
       </div>
     </header>
+    <div class="rule-line"></div>
 
-    <div class="content" v-if="project">
-      <div class="page-header">
-        <h1>A/B 비교 시뮬레이션</h1>
-        <p class="sub">같은 타겟에 두 광고안을 동시 테스트하고 어느 쪽이 더 효과적인지 비교합니다.</p>
-      </div>
-
+    <main class="wrap" v-if="project">
       <!-- Setup -->
-      <section v-if="!activeComparisonId" class="panel">
-        <!-- Seeds A/B -->
-        <div class="grid-2">
-          <div class="ab-card">
-            <div class="ab-header"><span class="ab-tag a">A</span> 광고안</div>
-            <textarea v-model="seedAContent" placeholder="A 광고안 내용을 붙여넣으세요..." rows="10" maxlength="5000"></textarea>
+      <section v-if="!activeComparisonId">
+        <div class="page-head">
+          <span class="eyebrow">A/B Comparison</span>
+          <h1>두 광고안 중,<br/><span class="italic">어느 쪽이 더 효과적일까요?</span></h1>
+          <p class="lede">
+            같은 타겟 집단에 두 광고안을 동시에 테스트하고, AI가 승자와 그 이유를 분석합니다.
+          </p>
+        </div>
+
+        <!-- AB inputs -->
+        <div class="ab-grid">
+          <div class="ab-card a">
+            <div class="ab-head">
+              <span class="ab-tag">A</span>
+              <span class="ab-label">광고안 A</span>
+            </div>
+            <textarea v-model="seedAContent"
+                      placeholder="A 광고안 내용을 붙여넣으세요…"
+                      rows="10" maxlength="5000"></textarea>
             <span class="len">{{ seedAContent.length }} / 5,000</span>
           </div>
-          <div class="ab-card">
-            <div class="ab-header"><span class="ab-tag b">B</span> 광고안</div>
-            <textarea v-model="seedBContent" placeholder="B 광고안 내용을 붙여넣으세요..." rows="10" maxlength="5000"></textarea>
+          <div class="ab-divider">
+            <span class="vs">vs</span>
+          </div>
+          <div class="ab-card b">
+            <div class="ab-head">
+              <span class="ab-tag">B</span>
+              <span class="ab-label">광고안 B</span>
+            </div>
+            <textarea v-model="seedBContent"
+                      placeholder="B 광고안 내용을 붙여넣으세요…"
+                      rows="10" maxlength="5000"></textarea>
             <span class="len">{{ seedBContent.length }} / 5,000</span>
           </div>
         </div>
 
         <!-- Persona -->
-        <div class="section-title">타겟 페르소나</div>
+        <div class="section-label">
+          <span class="sl-n">01</span>
+          <span class="sl-text">타겟 페르소나 선택</span>
+        </div>
         <div class="persona-grid">
-          <div v-for="(p, i) in presets" :key="i"
-               :class="['persona-card', { selected: selectedPreset === i }]"
-               @click="selectedPreset = i" tabindex="0" role="radio">
-            <div class="persona-check" v-if="selectedPreset === i">✓</div>
-            <div class="persona-name">{{ p.name }}</div>
-            <div class="persona-age">{{ p.age_range }}</div>
-            <div class="persona-tags">
-              <span v-for="(t, ti) in p.interests?.slice(0, 3)" :key="ti" class="ptag">{{ t }}</span>
+          <button v-for="(p, i) in presets" :key="i"
+                  :class="['p-card', { on: selectedPreset === i }]"
+                  @click="selectedPreset = i"
+                  type="button">
+            <span class="p-n">{{ String(i + 1).padStart(2, '0') }}</span>
+            <h3 class="p-name">{{ p.name }}</h3>
+            <span class="p-age">{{ p.age_range }}세</span>
+            <div class="p-tags">
+              <span v-for="(t, ti) in p.interests?.slice(0, 3)" :key="ti">{{ t }}</span>
+            </div>
+          </button>
+        </div>
+
+        <!-- Settings -->
+        <div class="section-label">
+          <span class="sl-n">02</span>
+          <span class="sl-text">실행 설정</span>
+        </div>
+        <div class="settings-row">
+          <div class="setting">
+            <label>비교 이름</label>
+            <input type="text" v-model="compareName" placeholder="예: 신제품 음료 A vs B" maxlength="60" />
+          </div>
+          <div class="setting">
+            <label>에이전트 수 (각 안당)</label>
+            <div class="range-wrap">
+              <input type="range" v-model.number="agentCount" min="10" max="60" step="5" />
+              <span class="range-val">{{ agentCount }}명</span>
             </div>
           </div>
         </div>
 
-        <!-- Settings -->
-        <div class="settings-row">
-          <div class="field">
-            <label>에이전트 수</label>
-            <input type="range" v-model.number="agentCount" min="10" max="60" step="5" />
-            <span class="val">{{ agentCount }}명 × 2안</span>
-          </div>
-          <div class="field">
-            <label>비교 이름</label>
-            <input type="text" v-model="compareName" placeholder="예: 신제품 음료 A vs B" maxlength="60" class="text-input" />
-          </div>
-        </div>
-
-        <button class="run-btn" :disabled="!canRun || starting" @click="handleRun">
-          <span v-if="starting" class="spinner-sm"></span>
-          <span v-else>A/B 비교 시작 →</span>
+        <button class="go-btn" :disabled="!canRun || starting" @click="handleRun">
+          <span v-if="starting" class="spin"></span>
+          <template v-else>
+            <span>A/B 비교 시작</span>
+            <span class="arrow">→</span>
+          </template>
         </button>
         <p class="cost-hint">※ 시뮬레이션 2개를 동시 실행합니다. LLM 비용이 단일 실행의 2배입니다.</p>
       </section>
 
       <!-- Progress / Result -->
-      <section v-else class="panel">
-        <div v-if="!comparison" class="center-state">
-          <div class="spinner-lg"></div><p>비교 불러오는 중...</p>
+      <section v-else>
+        <div v-if="!comparison" class="state-center">
+          <span class="dot-pulse"></span>
+          <p>불러오는 중…</p>
         </div>
 
         <div v-else-if="comparison.status === 'pending' || comparison.status === 'running'" class="running">
-          <div class="orbit"><div class="orbit-dot" v-for="n in 3" :key="n" :style="{ animationDelay: n * 0.4 + 's' }"></div></div>
-          <h2>A/B 비교 진행 중</h2>
-          <p class="run-desc">두 광고안의 시뮬레이션이 병렬로 실행되고 있습니다.</p>
-          <div class="sub-sims">
-            <div class="sub-sim">
-              <span class="ab-tag a">A</span>
-              <span>{{ subStatus(comparison.simulation_a_id) }}</span>
+          <span class="eyebrow">Running</span>
+          <h1>A/B 비교 진행 중</h1>
+          <p class="lede">두 광고안이 동시에 테스트되고 있습니다.</p>
+          <div class="ab-status">
+            <div class="as-col">
+              <span class="ab-tag big a">A</span>
+              <div>
+                <div class="as-label">광고안 A</div>
+                <div class="as-val">{{ subStatus(comparison.simulation_a_id) }}</div>
+              </div>
             </div>
-            <div class="sub-sim">
-              <span class="ab-tag b">B</span>
-              <span>{{ subStatus(comparison.simulation_b_id) }}</span>
+            <div class="as-col">
+              <span class="ab-tag big b">B</span>
+              <div>
+                <div class="as-label">광고안 B</div>
+                <div class="as-val">{{ subStatus(comparison.simulation_b_id) }}</div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div v-else-if="comparison.status === 'failed'" class="center-state">
-          <div class="fail-icon">✕</div>
-          <h2>비교 실패</h2>
+        <div v-else-if="comparison.status === 'failed'" class="state-center">
+          <span class="eyebrow err">Failed</span>
+          <h1>비교 실패</h1>
           <p>실행 중 오류가 발생했습니다.</p>
-          <button class="btn-ghost" @click="reset">다시 시도</button>
+          <button class="next-btn" @click="reset">다시 시도하기</button>
         </div>
 
         <div v-else-if="comparison.status === 'completed' && comparison.comparison_result" class="result">
-          <div class="winner-box" :class="'w-' + comparison.comparison_result.winner">
-            <div class="winner-label">승자</div>
-            <div class="winner-value">
-              <span v-if="comparison.comparison_result.winner === 'tie'">🤝 무승부</span>
-              <span v-else>{{ comparison.comparison_result.winner }}안 승리</span>
-            </div>
-            <p class="winner-reason">{{ comparison.comparison_result.winner_reason }}</p>
+          <header class="result-head">
+            <span class="eyebrow">Verdict</span>
+          </header>
+
+          <!-- Winner -->
+          <div class="winner" :class="'w-' + comparison.comparison_result.winner">
+            <span class="w-label">승자</span>
+            <h2 class="w-title">
+              <template v-if="comparison.comparison_result.winner === 'tie'">
+                <span class="italic">무승부</span>
+              </template>
+              <template v-else>
+                <span class="w-letter">{{ comparison.comparison_result.winner }}</span>
+                안이 더 설득력 있었어요
+              </template>
+            </h2>
+            <p class="w-reason">{{ comparison.comparison_result.winner_reason }}</p>
           </div>
 
+          <!-- Sentiment compare -->
           <div class="sent-compare">
-            <div class="sent-col">
-              <div class="col-head"><span class="ab-tag a">A</span></div>
-              <div class="bar-row"><span>긍정</span><div class="bar"><div class="fill pos" :style="{ width: (comparison.comparison_result.sentiment_a?.positive || 0) + '%' }"></div></div><span>{{ comparison.comparison_result.sentiment_a?.positive || 0 }}%</span></div>
-              <div class="bar-row"><span>중립</span><div class="bar"><div class="fill neu" :style="{ width: (comparison.comparison_result.sentiment_a?.neutral || 0) + '%' }"></div></div><span>{{ comparison.comparison_result.sentiment_a?.neutral || 0 }}%</span></div>
-              <div class="bar-row"><span>부정</span><div class="bar"><div class="fill neg" :style="{ width: (comparison.comparison_result.sentiment_a?.negative || 0) + '%' }"></div></div><span>{{ comparison.comparison_result.sentiment_a?.negative || 0 }}%</span></div>
+            <div class="sc-col">
+              <div class="sc-head"><span class="ab-tag a">A</span><span>광고안 A</span></div>
+              <div class="sbar"><span>긍정</span><div class="st"><div class="sf pos" :style="{ width: (comparison.comparison_result.sentiment_a?.positive || 0) + '%' }"></div></div><span class="pct">{{ comparison.comparison_result.sentiment_a?.positive || 0 }}%</span></div>
+              <div class="sbar"><span>중립</span><div class="st"><div class="sf neu" :style="{ width: (comparison.comparison_result.sentiment_a?.neutral || 0) + '%' }"></div></div><span class="pct">{{ comparison.comparison_result.sentiment_a?.neutral || 0 }}%</span></div>
+              <div class="sbar"><span>부정</span><div class="st"><div class="sf neg" :style="{ width: (comparison.comparison_result.sentiment_a?.negative || 0) + '%' }"></div></div><span class="pct">{{ comparison.comparison_result.sentiment_a?.negative || 0 }}%</span></div>
             </div>
-            <div class="sent-col">
-              <div class="col-head"><span class="ab-tag b">B</span></div>
-              <div class="bar-row"><span>긍정</span><div class="bar"><div class="fill pos" :style="{ width: (comparison.comparison_result.sentiment_b?.positive || 0) + '%' }"></div></div><span>{{ comparison.comparison_result.sentiment_b?.positive || 0 }}%</span></div>
-              <div class="bar-row"><span>중립</span><div class="bar"><div class="fill neu" :style="{ width: (comparison.comparison_result.sentiment_b?.neutral || 0) + '%' }"></div></div><span>{{ comparison.comparison_result.sentiment_b?.neutral || 0 }}%</span></div>
-              <div class="bar-row"><span>부정</span><div class="bar"><div class="fill neg" :style="{ width: (comparison.comparison_result.sentiment_b?.negative || 0) + '%' }"></div></div><span>{{ comparison.comparison_result.sentiment_b?.negative || 0 }}%</span></div>
-            </div>
-          </div>
-
-          <div class="grid-2">
-            <div class="swot">
-              <h4><span class="ab-tag a">A</span> 강점</h4>
-              <ul><li v-for="(x, i) in comparison.comparison_result.a_strengths" :key="i">{{ x }}</li></ul>
-              <h4>약점</h4>
-              <ul><li v-for="(x, i) in comparison.comparison_result.a_weaknesses" :key="i">{{ x }}</li></ul>
-            </div>
-            <div class="swot">
-              <h4><span class="ab-tag b">B</span> 강점</h4>
-              <ul><li v-for="(x, i) in comparison.comparison_result.b_strengths" :key="i">{{ x }}</li></ul>
-              <h4>약점</h4>
-              <ul><li v-for="(x, i) in comparison.comparison_result.b_weaknesses" :key="i">{{ x }}</li></ul>
+            <div class="sc-col">
+              <div class="sc-head"><span class="ab-tag b">B</span><span>광고안 B</span></div>
+              <div class="sbar"><span>긍정</span><div class="st"><div class="sf pos" :style="{ width: (comparison.comparison_result.sentiment_b?.positive || 0) + '%' }"></div></div><span class="pct">{{ comparison.comparison_result.sentiment_b?.positive || 0 }}%</span></div>
+              <div class="sbar"><span>중립</span><div class="st"><div class="sf neu" :style="{ width: (comparison.comparison_result.sentiment_b?.neutral || 0) + '%' }"></div></div><span class="pct">{{ comparison.comparison_result.sentiment_b?.neutral || 0 }}%</span></div>
+              <div class="sbar"><span>부정</span><div class="st"><div class="sf neg" :style="{ width: (comparison.comparison_result.sentiment_b?.negative || 0) + '%' }"></div></div><span class="pct">{{ comparison.comparison_result.sentiment_b?.negative || 0 }}%</span></div>
             </div>
           </div>
 
-          <div class="diff-box">
-            <h3>핵심 차이점</h3>
-            <ul><li v-for="(x, i) in comparison.comparison_result.key_differences" :key="i">{{ x }}</li></ul>
+          <!-- SWOT -->
+          <div class="swot-grid">
+            <div class="swot-card a">
+              <div class="swot-head"><span class="ab-tag a">A</span><span>광고안 A</span></div>
+              <div class="swot-sec">
+                <h4><span class="plus">+</span>강점</h4>
+                <ul><li v-for="(x, i) in comparison.comparison_result.a_strengths" :key="i">{{ x }}</li></ul>
+              </div>
+              <div class="swot-sec">
+                <h4><span class="minus">−</span>약점</h4>
+                <ul><li v-for="(x, i) in comparison.comparison_result.a_weaknesses" :key="i">{{ x }}</li></ul>
+              </div>
+            </div>
+            <div class="swot-card b">
+              <div class="swot-head"><span class="ab-tag b">B</span><span>광고안 B</span></div>
+              <div class="swot-sec">
+                <h4><span class="plus">+</span>강점</h4>
+                <ul><li v-for="(x, i) in comparison.comparison_result.b_strengths" :key="i">{{ x }}</li></ul>
+              </div>
+              <div class="swot-sec">
+                <h4><span class="minus">−</span>약점</h4>
+                <ul><li v-for="(x, i) in comparison.comparison_result.b_weaknesses" :key="i">{{ x }}</li></ul>
+              </div>
+            </div>
           </div>
 
-          <div class="rec-box">
-            <h3>추천사항</h3>
-            <p>{{ comparison.comparison_result.recommendation }}</p>
+          <!-- Differences -->
+          <div class="card diff-card">
+            <h3 class="card-title">핵심 차이점</h3>
+            <ol class="num-list">
+              <li v-for="(x, i) in comparison.comparison_result.key_differences" :key="i">
+                <span class="num">{{ String(i + 1).padStart(2, '0') }}</span>
+                <span>{{ x }}</span>
+              </li>
+            </ol>
+          </div>
+
+          <!-- Rec -->
+          <div class="card rec-card">
+            <h3 class="card-title">추천사항</h3>
+            <p class="rec-text">{{ comparison.comparison_result.recommendation }}</p>
           </div>
 
           <div class="result-nav">
-            <button class="btn-ghost" @click="reset">새 비교 시작</button>
-            <div class="sub-links">
+            <button class="ghost-btn" @click="reset">새 비교 시작</button>
+            <div class="detail-links">
               <a v-if="comparison.simulation_a_id" :href="`/adsim/simulation/${comparison.simulation_a_id}`" target="_blank">A 상세 →</a>
               <a v-if="comparison.simulation_b_id" :href="`/adsim/simulation/${comparison.simulation_b_id}`" target="_blank">B 상세 →</a>
             </div>
           </div>
         </div>
       </section>
-    </div>
+    </main>
   </div>
 </template>
 
@@ -191,12 +254,12 @@ const canRun = computed(() =>
 )
 
 const subStatus = (simId) => {
-  if (!simId) return '대기 중...'
+  if (!simId) return '대기 중…'
   const s = subSimStatus.value[simId]
-  if (!s) return '시작 중...'
+  if (!s) return '시작 중…'
   if (s.status === 'completed') return '✓ 완료'
   if (s.status === 'failed') return '✗ 실패'
-  return `진행 중 (${s.current_round}/${s.total_rounds})`
+  return `진행 중 · ${s.current_round}/${s.total_rounds}`
 }
 
 const handleRun = async () => {
@@ -227,9 +290,7 @@ const handleRun = async () => {
 const loadComparison = async () => {
   if (!activeComparisonId.value) return
   try {
-    const r = await getComparison(activeComparisonId.value)
-    comparison.value = r.data.data
-    // poll sub simulations too
+    comparison.value = (await getComparison(activeComparisonId.value)).data.data
     const ids = [comparison.value.simulation_a_id, comparison.value.simulation_b_id].filter(Boolean)
     if (ids.length) {
       const results = await Promise.all(ids.map(id => getSimulation(id).then(x => x.data.data).catch(() => null)))
@@ -237,16 +298,11 @@ const loadComparison = async () => {
       results.filter(Boolean).forEach(s => { map[s.simulation_id] = s })
       subSimStatus.value = map
     }
-    if (['completed', 'failed'].includes(comparison.value.status)) {
-      stopPolling()
-    }
+    if (['completed', 'failed'].includes(comparison.value.status)) stopPolling()
   } catch (e) { console.error(e) }
 }
 
-const startPolling = () => {
-  loadComparison()
-  poll = setInterval(loadComparison, 3000)
-}
+const startPolling = () => { loadComparison(); poll = setInterval(loadComparison, 3000) }
 const stopPolling = () => { if (poll) { clearInterval(poll); poll = null } }
 
 const reset = () => {
@@ -268,121 +324,385 @@ onUnmounted(stopPolling)
 </script>
 
 <style scoped>
-* { box-sizing: border-box; }
-.adsim-compare { min-height: 100vh; background: #0c0f14; color: #e8eaf0; font-family: 'IBM Plex Sans', 'Noto Sans KR', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+.page {
+  min-height: 100vh;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+.topbar { display: flex; padding: 22px 0 18px; }
+.bar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand { font-family: var(--font-display); font-weight: 500; font-size: 20px; cursor: pointer; letter-spacing: -0.01em; font-variation-settings: 'opsz' 40; }
+.bar-sep { color: var(--ink-faint); font-family: var(--font-display); }
+.bar-link { font-family: var(--font-body); font-size: 14px; color: var(--ink-muted); cursor: pointer; }
+.bar-link:hover { color: var(--accent); }
+.bar-crumb { font-family: var(--font-display); font-style: italic; font-size: 17px; color: var(--ink-soft); font-variation-settings: 'opsz' 24, 'SOFT' 80; }
+.rule-line { height: 1px; background: var(--ink); }
 
-.topbar { height: 56px; display: flex; align-items: center; padding: 0 32px; border-bottom: 1px solid #1e2636; background: rgba(12,15,20,0.85); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 50; }
-.topbar-left { display: flex; align-items: center; gap: 10px; }
-.logo { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-.logo-mark { color: #d4a053; }
-.logo-text { font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 0.95rem; }
-.breadcrumb-sep { color: #5a6378; }
-.breadcrumb-link { font-size: 0.85rem; color: #8b93a6; cursor: pointer; }
-.breadcrumb-link:hover { color: #d4a053; }
-.breadcrumb-current { font-size: 0.85rem; color: #8b93a6; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 56px 0 100px; }
 
-.content { max-width: 960px; margin: 0 auto; padding: 32px 24px 80px; }
-.page-header { margin-bottom: 32px; }
-.page-header h1 { font-size: 1.6rem; margin: 0 0 8px; }
-.sub { color: #8b93a6; margin: 0; font-size: 0.9rem; }
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 14px;
+}
+.eyebrow.err { color: var(--negative); }
 
-.panel { animation: fadeIn 0.3s; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } }
+.page-head { margin-bottom: 56px; }
+.page-head h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 56px;
+  letter-spacing: -0.025em;
+  line-height: 1.06;
+  margin: 0 0 18px;
+  font-variation-settings: 'opsz' 144, 'SOFT' 30;
+}
+.italic { font-style: italic; color: var(--accent); font-variation-settings: 'opsz' 144, 'SOFT' 100; }
+.lede { font-size: 17px; line-height: 1.6; color: var(--ink-soft); margin: 0; max-width: 600px; }
 
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 28px; }
-.ab-card { background: #181d27; border: 1px solid #1e2636; border-radius: 8px; padding: 16px; position: relative; }
-.ab-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-weight: 600; font-size: 0.95rem; }
-.ab-tag { width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; font-weight: 700; color: #0c0f14; }
-.ab-tag.a { background: #5ea8d4; }
-.ab-tag.b { background: #a87ed4; }
-.ab-card textarea { width: 100%; background: #0c0f14; border: 1px solid #2a3244; color: #e8eaf0; padding: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 0.83rem; line-height: 1.6; border-radius: 6px; resize: vertical; min-height: 180px; outline: none; }
-.ab-card textarea:focus { border-color: #d4a053; }
-.len { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: #5a6378; margin-top: 6px; display: block; text-align: right; }
+/* AB inputs */
+.ab-grid {
+  display: grid;
+  grid-template-columns: 1fr 48px 1fr;
+  gap: 0;
+  align-items: stretch;
+  margin-bottom: 56px;
+}
+.ab-card {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s;
+}
+.ab-card.a { border-top: 3px solid var(--type-a); }
+.ab-card.b { border-top: 3px solid var(--type-b); }
+.ab-card:focus-within { border-color: var(--ink); }
+.ab-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.ab-tag {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  color: #fff;
+  background: var(--ink);
+  font-variation-settings: 'opsz' 24;
+}
+.ab-card.a .ab-tag, .ab-tag.a { background: var(--type-a); }
+.ab-card.b .ab-tag, .ab-tag.b { background: var(--type-b); }
+.ab-tag.big { width: 48px; height: 48px; font-size: 22px; }
+.ab-label { font-weight: 500; font-size: 15px; color: var(--ink); }
+.ab-card textarea {
+  width: 100%;
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--ink);
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.65;
+  resize: vertical;
+  min-height: 200px;
+  outline: none;
+}
+.ab-card textarea::placeholder {
+  color: var(--ink-faint);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-variation-settings: 'opsz' 14;
+}
+.len { font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); text-align: right; margin-top: 10px; letter-spacing: 0.02em; }
+.ab-divider { display: flex; align-items: center; justify-content: center; }
+.vs {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 22px;
+  color: var(--accent);
+  font-variation-settings: 'opsz' 24, 'SOFT' 100;
+}
 
-.section-title { font-size: 0.95rem; font-weight: 600; margin: 24px 0 12px; }
-.persona-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin-bottom: 24px; }
-.persona-card { background: #181d27; border: 1px solid #1e2636; border-radius: 8px; padding: 14px; cursor: pointer; transition: all 0.2s; position: relative; outline: none; }
-.persona-card:hover { border-color: #5a6378; }
-.persona-card.selected { border-color: #d4a053; background: rgba(212,160,83,0.08); }
-.persona-check { position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; background: #d4a053; color: #0c0f14; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; }
-.persona-name { font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; }
-.persona-age { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: #5a6378; margin-bottom: 6px; }
-.persona-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-.ptag { font-size: 0.65rem; padding: 2px 7px; background: #232a38; border-radius: 99px; color: #8b93a6; }
+/* Section labels */
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 20px;
+  padding-top: 24px;
+  border-top: 1px solid var(--rule);
+}
+.sl-n {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+}
+.sl-text {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  font-variation-settings: 'opsz' 24, 'SOFT' 80;
+}
 
-.settings-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
-.field { background: #181d27; border: 1px solid #1e2636; border-radius: 8px; padding: 14px 16px; }
-.field label { display: block; font-size: 0.78rem; color: #8b93a6; margin-bottom: 10px; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.5px; }
-.field input[type="range"] { width: 100%; appearance: none; height: 4px; background: #2a3244; border-radius: 2px; outline: none; }
-.field input[type="range"]::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #d4a053; cursor: pointer; border: 2px solid #0c0f14; }
-.val { display: block; margin-top: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; color: #d4a053; font-weight: 600; }
-.text-input { width: 100%; background: #0c0f14; border: 1px solid #2a3244; color: #e8eaf0; padding: 10px 12px; border-radius: 6px; font-size: 0.9rem; outline: none; font-family: inherit; }
-.text-input:focus { border-color: #d4a053; }
+/* Persona */
+.persona-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 40px; }
+.p-card {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  padding: 18px 18px;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-body);
+  color: var(--ink);
+  transition: all 0.2s;
+}
+.p-card:hover { border-color: var(--ink-muted); transform: translateY(-1px); }
+.p-card.on { border-color: var(--ink); background: var(--ink); color: var(--paper-raised); box-shadow: 0 12px 28px -16px rgba(26,24,21,0.5); }
+.p-n { font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); display: block; margin-bottom: 8px; letter-spacing: 0.1em; }
+.p-card.on .p-n { color: var(--accent); }
+.p-name { font-family: var(--font-display); font-weight: 500; font-size: 15px; margin: 0 0 4px; letter-spacing: -0.01em; font-variation-settings: 'opsz' 24; }
+.p-age { font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); display: block; margin-bottom: 10px; }
+.p-card.on .p-age { color: var(--paper-sunk); }
+.p-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.p-tags span { font-size: 10px; padding: 2px 7px; background: var(--paper-sunk); border-radius: 99px; color: var(--ink-soft); }
+.p-card.on .p-tags span { background: rgba(245,241,232,0.15); color: var(--paper-raised); }
 
-.run-btn { width: 100%; background: #d4a053; color: #0c0f14; border: none; padding: 16px; border-radius: 8px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.25s; }
-.run-btn:hover:not(:disabled) { background: #e0b060; box-shadow: 0 6px 24px rgba(212,160,83,0.3); }
-.run-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-.spinner-sm { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(0,0,0,0.2); border-top-color: #0c0f14; border-radius: 50%; animation: spin 0.6s linear infinite; }
+/* Settings */
+.settings-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 40px; }
+.setting {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+}
+.setting label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-muted);
+  display: block;
+  margin-bottom: 12px;
+}
+.setting input[type="text"] {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  outline: none;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--rule);
+  transition: border-color 0.2s;
+  font-variation-settings: 'opsz' 40;
+}
+.setting input[type="text"]:focus { border-color: var(--ink); }
+.setting input[type="text"]::placeholder { color: var(--ink-faint); font-style: italic; font-variation-settings: 'opsz' 24, 'SOFT' 80; }
+
+.range-wrap { display: flex; align-items: center; gap: 14px; }
+.range-wrap input[type="range"] { flex: 1; appearance: none; height: 3px; background: var(--rule); border-radius: 2px; outline: none; }
+.range-wrap input[type="range"]::-webkit-slider-thumb { appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--ink); cursor: pointer; border: 3px solid var(--paper-card); box-shadow: 0 0 0 1px var(--ink); }
+.range-val {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 22px;
+  color: var(--accent);
+  min-width: 70px;
+  text-align: right;
+  font-variation-settings: 'opsz' 40;
+}
+
+/* Go button */
+.go-btn {
+  width: 100%;
+  background: var(--ink);
+  color: var(--paper-raised);
+  border: none;
+  padding: 24px 32px;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  transition: background 0.25s;
+}
+.go-btn:hover:not(:disabled) { background: var(--accent); }
+.go-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.go-btn .arrow { font-family: var(--font-display); font-size: 22px; transition: transform 0.2s; }
+.go-btn:hover:not(:disabled) .arrow { transform: translateX(6px); }
+.cost-hint { text-align: center; font-size: 13px; color: var(--ink-muted); margin: 14px 0 0; }
+
+/* Running state */
+.state-center { text-align: center; padding: 80px 0; }
+.state-center h1 { font-family: var(--font-display); font-weight: 400; font-size: 40px; margin: 0 0 12px; letter-spacing: -0.02em; font-variation-settings: 'opsz' 144; }
+.state-center p { color: var(--ink-muted); margin: 0 0 24px; }
+.dot-pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; margin-bottom: 14px; animation: pulse 1.2s infinite; }
+@keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+.running { text-align: center; padding: 60px 0; max-width: 640px; margin: 0 auto; }
+.running h1 { font-family: var(--font-display); font-weight: 400; font-size: 44px; margin: 0 0 14px; letter-spacing: -0.02em; font-variation-settings: 'opsz' 144; }
+.ab-status { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 40px; }
+.as-col {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+}
+.as-label { font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 4px; }
+.as-val { font-family: var(--font-display); font-style: italic; font-size: 18px; font-variation-settings: 'opsz' 24, 'SOFT' 80; }
+
+.next-btn { background: var(--ink); color: var(--paper-raised); border: none; padding: 14px 26px; border-radius: var(--radius); cursor: pointer; font-family: var(--font-body); font-weight: 500; font-size: 14px; transition: background 0.2s; }
+.next-btn:hover { background: var(--accent); }
+
+/* Result */
+.result-head { margin-bottom: 32px; }
+
+.winner {
+  padding: 56px 48px;
+  border-radius: var(--radius-lg);
+  text-align: center;
+  margin-bottom: 24px;
+  border: 1px solid var(--rule);
+  background: var(--paper-card);
+}
+.winner.w-A { border-top: 4px solid var(--type-a); }
+.winner.w-B { border-top: 4px solid var(--type-b); }
+.winner.w-tie { border-top: 4px solid var(--neutral); }
+.w-label { font-family: var(--font-mono); font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.22em; display: block; margin-bottom: 14px; }
+.w-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 44px;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  margin: 0 0 20px;
+  color: var(--ink);
+  font-variation-settings: 'opsz' 144, 'SOFT' 30;
+}
+.w-letter { color: var(--accent); font-style: italic; font-weight: 600; font-variation-settings: 'opsz' 144, 'SOFT' 100; }
+.w-reason { font-size: 16px; line-height: 1.65; color: var(--ink-soft); max-width: 560px; margin: 0 auto; }
+
+/* Sentiment compare */
+.sent-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+.sc-col { background: var(--paper-card); border: 1px solid var(--rule); border-radius: var(--radius-lg); padding: 24px; }
+.sc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; font-weight: 500; font-size: 14px; }
+.sbar { display: grid; grid-template-columns: 44px 1fr 40px; gap: 12px; align-items: center; font-size: 13px; margin-bottom: 10px; color: var(--ink-soft); }
+.sbar .st { height: 6px; background: var(--paper-sunk); border-radius: 3px; overflow: hidden; }
+.sbar .sf { height: 100%; transition: width 0.6s; }
+.sbar .sf.pos { background: var(--positive); }
+.sbar .sf.neu { background: var(--neutral); }
+.sbar .sf.neg { background: var(--negative); }
+.sbar .pct { font-family: var(--font-mono); font-size: 12px; font-weight: 600; text-align: right; color: var(--ink); }
+
+/* SWOT */
+.swot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+.swot-card {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  padding: 26px;
+}
+.swot-card.a { border-top: 3px solid var(--type-a); }
+.swot-card.b { border-top: 3px solid var(--type-b); }
+.swot-head { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; font-weight: 500; font-size: 14px; }
+.swot-sec { margin-bottom: 20px; }
+.swot-sec:last-child { margin-bottom: 0; }
+.swot-sec h4 {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-muted);
+  margin: 0 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.plus, .minus { font-family: var(--font-display); font-size: 18px; line-height: 1; }
+.plus { color: var(--positive); }
+.minus { color: var(--negative); }
+.swot-sec ul { list-style: none; padding: 0; margin: 0; }
+.swot-sec li {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  padding: 6px 0 6px 14px;
+  position: relative;
+}
+.swot-sec li::before {
+  content: '';
+  width: 4px; height: 4px;
+  background: var(--ink-faint);
+  border-radius: 50%;
+  position: absolute;
+  left: 0; top: 14px;
+}
+
+/* Diff + Rec cards */
+.card { background: var(--paper-card); border: 1px solid var(--rule); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 14px; }
+.card-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  margin: 0 0 20px;
+  color: var(--ink);
+  font-variation-settings: 'opsz' 24, 'SOFT' 80;
+}
+.num-list { list-style: none; padding: 0; margin: 0; }
+.num-list li { display: flex; gap: 14px; margin-bottom: 14px; font-size: 14px; line-height: 1.6; color: var(--ink-soft); }
+.num-list .num { font-family: var(--font-mono); font-size: 11px; color: var(--accent); letter-spacing: 0.05em; flex-shrink: 0; margin-top: 4px; }
+.rec-card { border-left: 3px solid var(--positive); }
+.rec-text { margin: 0; font-size: 15px; line-height: 1.75; color: var(--ink-soft); }
+
+/* Result nav */
+.result-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--rule); }
+.ghost-btn { background: none; border: 1px solid var(--rule); color: var(--ink-soft); padding: 10px 20px; border-radius: var(--radius); cursor: pointer; font-family: var(--font-body); font-size: 14px; transition: all 0.2s; }
+.ghost-btn:hover { border-color: var(--ink); color: var(--ink); }
+.detail-links { display: flex; gap: 20px; }
+.detail-links a { color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 500; }
+.detail-links a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.spin { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.25); border-top-color: currentColor; border-radius: 50%; display: inline-block; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.cost-hint { text-align: center; font-size: 0.78rem; color: #5a6378; margin-top: 12px; }
 
-/* Running / Result */
-.center-state { text-align: center; padding: 80px 0; color: #8b93a6; }
-.spinner-lg { width: 28px; height: 28px; border: 3px solid #2a3244; border-top-color: #d4a053; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
-.running { text-align: center; padding: 60px 0; }
-.running h2 { font-size: 1.4rem; margin: 0 0 8px; }
-.run-desc { color: #8b93a6; margin-bottom: 32px; }
-.orbit { width: 64px; height: 64px; position: relative; margin: 0 auto 24px; }
-.orbit-dot { width: 10px; height: 10px; background: #d4a053; border-radius: 50%; position: absolute; top: 50%; left: 50%; animation: orbit-spin 1.8s linear infinite; }
-@keyframes orbit-spin { to { transform: rotate(360deg) translateX(24px); } }
-.sub-sims { display: flex; justify-content: center; gap: 24px; font-family: 'IBM Plex Mono', monospace; font-size: 0.88rem; color: #8b93a6; }
-.sub-sim { display: flex; align-items: center; gap: 10px; }
-
-.fail-icon { font-size: 2.5rem; color: #ef4444; margin-bottom: 16px; }
-
-.result { display: flex; flex-direction: column; gap: 20px; }
-.winner-box { background: #181d27; border: 1px solid #1e2636; border-radius: 10px; padding: 28px; text-align: center; }
-.winner-box.w-A { border-left: 4px solid #5ea8d4; }
-.winner-box.w-B { border-left: 4px solid #a87ed4; }
-.winner-box.w-tie { border-left: 4px solid #8b93a6; }
-.winner-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: #5a6378; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-.winner-value { font-size: 1.8rem; font-weight: 700; margin-bottom: 12px; color: #d4a053; }
-.winner-reason { color: #8b93a6; line-height: 1.7; max-width: 600px; margin: 0 auto; }
-
-.sent-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.sent-col { background: #181d27; border: 1px solid #1e2636; border-radius: 8px; padding: 18px; }
-.col-head { margin-bottom: 14px; }
-.bar-row { display: grid; grid-template-columns: 40px 1fr 44px; gap: 10px; align-items: center; font-size: 0.82rem; margin-bottom: 8px; }
-.bar { height: 7px; background: #232a38; border-radius: 4px; overflow: hidden; }
-.fill { height: 100%; transition: width 0.6s; }
-.fill.pos { background: #4ade80; }
-.fill.neu { background: #94a3b8; }
-.fill.neg { background: #ef4444; }
-
-.swot { background: #181d27; border: 1px solid #1e2636; border-radius: 8px; padding: 20px; }
-.swot h4 { font-size: 0.88rem; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
-.swot h4:not(:first-child) { margin-top: 16px; }
-.swot ul { list-style: none; padding: 0; margin: 0; }
-.swot li { font-size: 0.85rem; color: #8b93a6; line-height: 1.6; padding-left: 14px; position: relative; margin-bottom: 6px; }
-.swot li::before { content: '•'; position: absolute; left: 0; color: #d4a053; }
-
-.diff-box, .rec-box { background: #181d27; border: 1px solid #1e2636; border-radius: 8px; padding: 22px; }
-.diff-box h3, .rec-box h3 { font-size: 1rem; margin: 0 0 12px; }
-.diff-box ul { list-style: none; padding: 0; margin: 0; }
-.diff-box li { font-size: 0.88rem; color: #8b93a6; line-height: 1.7; padding-left: 18px; position: relative; }
-.diff-box li::before { content: '→'; position: absolute; left: 0; color: #d4a053; }
-.rec-box { border-left: 3px solid #4ade80; }
-.rec-box p { margin: 0; color: #8b93a6; line-height: 1.75; font-size: 0.9rem; }
-
-.result-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 20px; border-top: 1px solid #1e2636; }
-.btn-ghost { background: none; border: 1px solid #2a3244; color: #8b93a6; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
-.btn-ghost:hover { border-color: #d4a053; color: #d4a053; }
-.sub-links { display: flex; gap: 16px; }
-.sub-links a { color: #d4a053; text-decoration: none; font-size: 0.85rem; }
-.sub-links a:hover { text-decoration: underline; }
-
-@media (max-width: 768px) {
-  .grid-2, .sent-compare, .settings-row { grid-template-columns: 1fr; }
+@media (max-width: 820px) {
+  .page { padding: 0 20px; }
+  .wrap { padding: 36px 0 60px; }
+  .ab-grid { grid-template-columns: 1fr; gap: 14px; }
+  .ab-divider { padding: 12px 0; }
+  .settings-row, .sent-compare, .swot-grid, .ab-status { grid-template-columns: 1fr; }
   .persona-grid { grid-template-columns: 1fr 1fr; }
+  .page-head h1, .winner .w-title { font-size: 36px; }
+  .winner { padding: 32px 24px; }
+  .setting input[type="text"], .range-val { font-size: 18px; }
 }
 </style>

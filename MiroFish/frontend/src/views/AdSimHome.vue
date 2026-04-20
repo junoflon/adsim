@@ -1,132 +1,153 @@
 <template>
-  <div class="adsim-home">
-    <!-- Top Bar -->
-    <header class="topbar">
-      <div class="topbar-left">
-        <div class="logo" @click="$router.push('/')" tabindex="0" role="button" aria-label="MiroFish 홈">
-          <span class="logo-mark">◆</span>
-          <span class="logo-text">AdSim</span>
-        </div>
-        <span class="logo-divider"></span>
-        <span class="logo-sub">광고 시뮬레이션 엔진</span>
+  <div class="page">
+    <!-- Masthead -->
+    <header class="masthead">
+      <div class="mast-left">
+        <span class="mast-mono">AdSim — Vol.1</span>
       </div>
-      <div class="topbar-right">
-        <span class="status-pill"><span class="pulse"></span>시스템 정상</span>
+      <div class="mast-center">
+        <span class="brand" @click="$router.push('/')">AdSim</span>
+      </div>
+      <div class="mast-right">
+        <span class="mast-mono">{{ today }}</span>
       </div>
     </header>
 
-    <!-- Hero -->
+    <div class="rule-line"></div>
+
+    <!-- Hero: editorial cover -->
     <section class="hero">
-      <div class="hero-inner">
-        <div class="hero-label">MiroFish 기반 마케팅 인텔리전스</div>
-        <h1 class="hero-title">
-          광고를 집행하기 전에,<br/>
-          <span class="accent">가상 소비자의 반응</span>을 먼저 확인하세요.
-        </h1>
-        <p class="hero-desc">
-          수십 명의 AI 에이전트가 당신의 광고에 진짜 소비자처럼 반응합니다.
-          점수만 주는 게 아니라, <em>왜</em> 좋은지 <em>왜</em> 싫은지 대화로 확인하세요.
-        </p>
-        <button class="cta-btn" @click="showCreateModal = true">
-          <span>새 프로젝트 시작</span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      <div class="hero-eyebrow">
+        <span class="eyebrow-line"></span>
+        <span class="eyebrow-text">광고 전에, 반응을 먼저 보다</span>
+      </div>
+      <h1 class="hero-title">
+        <span class="hero-italic">가상 소비자</span>에게<br/>
+        광고를 먼저 <span class="hero-underline">보여주세요</span>.
+      </h1>
+      <p class="hero-lede">
+        수십 명의 AI 에이전트가 당신의 광고 대본과 USP에 반응합니다.
+        단순한 점수가 아니라, <em>"왜 좋은지"</em>와 <em>"왜 싫은지"</em>를 대화로 돌려드립니다.
+      </p>
+      <div class="hero-actions">
+        <button class="btn-primary" @click="openCreate">
+          새 프로젝트 시작하기
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+        <button class="btn-link" @click="scrollToList">
+          {{ projects.length ? `진행 중인 프로젝트 ${projects.length}개 보기` : '사용 가이드' }}
         </button>
       </div>
-      <div class="hero-deco">
-        <div class="deco-grid">
-          <div v-for="n in 16" :key="n" class="deco-cell" :style="{ animationDelay: n * 0.08 + 's' }"></div>
-        </div>
+    </section>
+
+    <!-- Feature band -->
+    <section class="features">
+      <div class="feature">
+        <div class="feat-num">01</div>
+        <h3>광고 대본 입력</h3>
+        <p>텍스트 붙여넣기 또는 PDF 업로드. 최대 5,000자.</p>
+      </div>
+      <div class="feature">
+        <div class="feat-num">02</div>
+        <h3>페르소나 선택</h3>
+        <p>10가지 프리셋 타겟 또는 직접 설정한 집단.</p>
+      </div>
+      <div class="feature">
+        <div class="feat-num">03</div>
+        <h3>분석 보고서</h3>
+        <p>감정 분포, 인사이트, 우려사항, 개선 추천.</p>
       </div>
     </section>
 
-    <!-- Project List -->
-    <section class="projects-section">
-      <div class="section-header">
-        <h2>프로젝트</h2>
-        <span class="count-badge" v-if="projects.length">{{ projects.length }}개</span>
+    <div class="rule-line"></div>
+
+    <!-- Projects -->
+    <section class="projects" ref="projectsEl">
+      <div class="sec-head">
+        <h2 class="sec-title">프로젝트</h2>
+        <span class="sec-count" v-if="projects.length">{{ projects.length }}</span>
       </div>
 
-      <div v-if="loading" class="loading-state">
-        <div class="spinner"></div>
-        <span>프로젝트를 불러오는 중...</span>
+      <div v-if="loading" class="state">
+        <span class="dot-pulse"></span>
+        <span>불러오는 중</span>
       </div>
 
-      <div v-else-if="projects.length === 0" class="empty-state">
-        <div class="empty-icon">◇</div>
-        <p>아직 프로젝트가 없습니다</p>
-        <p class="empty-hint">위 버튼으로 첫 프로젝트를 만들어보세요</p>
+      <div v-else-if="projects.length === 0" class="empty">
+        <p class="empty-title">아직 만든 프로젝트가 없어요</p>
+        <p class="empty-hint">위 버튼으로 첫 테스트를 시작해보세요.</p>
       </div>
 
-      <div v-else class="project-list">
-        <article v-for="p in projects" :key="p.project_id" class="project-card"
-                 @click="$router.push(`/adsim/project/${p.project_id}`)"
-                 tabindex="0" role="button"
-                 @keydown.enter="$router.push(`/adsim/project/${p.project_id}`)">
-          <div class="card-top">
-            <span class="card-type-dot" :class="p.type"></span>
-            <span class="card-type-label">{{ p.type === 'ad_reaction' ? '광고 반응' : 'USP 테스트' }}</span>
-            <button class="card-delete" @click.stop="handleDelete(p.project_id)" aria-label="프로젝트 삭제">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-            </button>
+      <ol v-else class="project-list">
+        <li v-for="(p, i) in projects" :key="p.project_id" class="project-row"
+            @click="$router.push(`/adsim/project/${p.project_id}`)"
+            tabindex="0" role="button"
+            @keydown.enter="$router.push(`/adsim/project/${p.project_id}`)">
+          <span class="row-idx">{{ String(i + 1).padStart(2, '0') }}</span>
+          <div class="row-main">
+            <div class="row-top">
+              <span class="row-type" :class="p.type">{{ p.type === 'ad_reaction' ? '광고 반응' : 'USP 테스트' }}</span>
+              <time>{{ formatDate(p.created_at) }}</time>
+            </div>
+              <h3 class="row-name">{{ p.name }}</h3>
+              <p class="row-desc">{{ p.description || '설명 없음' }}</p>
           </div>
-          <h3 class="card-name">{{ p.name }}</h3>
-          <p class="card-desc">{{ p.description || '설명이 없습니다' }}</p>
-          <div class="card-footer">
-            <time class="card-date">{{ formatDate(p.created_at) }}</time>
-            <span class="card-arrow">→</span>
-          </div>
-        </article>
-      </div>
+          <button class="row-del" @click.stop="handleDelete(p.project_id)" aria-label="삭제">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+          <span class="row-arrow">→</span>
+        </li>
+      </ol>
     </section>
+
+    <footer class="page-foot">
+      <span>AdSim · MiroFish Engine</span>
+      <span class="foot-mono">광고를 먼저 보고, 반응을 먼저 읽다</span>
+    </footer>
 
     <!-- Create Modal -->
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false" @keydown.escape="showCreateModal = false">
-          <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-            <div class="modal-header">
-              <h2 id="modal-title">새 프로젝트</h2>
-              <button class="modal-close" @click="showCreateModal = false" aria-label="닫기">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-              </button>
+        <div v-if="showCreateModal" class="overlay" @click.self="showCreateModal = false">
+          <div class="sheet" role="dialog" aria-modal="true">
+            <div class="sheet-head">
+              <span class="sheet-eyebrow">NEW PROJECT</span>
+              <button class="sheet-close" @click="showCreateModal = false" aria-label="닫기">✕</button>
             </div>
 
-            <div class="modal-body">
-              <div class="field">
-                <label for="proj-name">프로젝트 이름 <span class="required">*</span></label>
-                <input id="proj-name" v-model="form.name" placeholder="예: 신규 음료 TV광고 테스트"
-                       ref="nameInput" maxlength="60" @keydown.enter="handleCreate" />
-                <span class="char-count">{{ form.name.length }}/60</span>
-              </div>
+            <h2 class="sheet-title">무엇을 테스트하시겠어요?</h2>
 
-              <div class="field">
-                <label>시뮬레이션 유형 <span class="required">*</span></label>
-                <div class="type-selector">
-                  <button :class="['type-option', { active: form.type === 'ad_reaction' }]"
-                          @click="form.type = 'ad_reaction'">
-                    <span class="type-icon">📺</span>
-                    <span class="type-label">광고 반응 테스트</span>
-                    <span class="type-help">광고 대본/영상에 대한 소비자 반응 예측</span>
-                  </button>
-                  <button :class="['type-option', { active: form.type === 'usp_test' }]"
-                          @click="form.type = 'usp_test'">
-                    <span class="type-icon">🎯</span>
-                    <span class="type-label">USP 시장 반응</span>
-                    <span class="type-help">제품 차별점(USP)에 대한 시장 수용도 테스트</span>
-                  </button>
-                </div>
-              </div>
+            <div class="field">
+              <label>프로젝트 이름</label>
+              <input v-model="form.name" placeholder="예: 신제품 음료 TV광고 테스트"
+                     ref="nameInput" maxlength="60" @keydown.enter="handleCreate" />
+            </div>
 
-              <div class="field">
-                <label for="proj-desc">설명 <span class="optional">(선택)</span></label>
-                <textarea id="proj-desc" v-model="form.description" placeholder="프로젝트에 대한 간단한 메모" rows="3"></textarea>
+            <div class="field">
+              <label>테스트 종류</label>
+              <div class="pick">
+                <button :class="['pick-btn', { on: form.type === 'ad_reaction' }]"
+                        @click="form.type = 'ad_reaction'">
+                  <span class="pick-title">광고 반응</span>
+                  <span class="pick-sub">대본/영상 반응 예측</span>
+                </button>
+                <button :class="['pick-btn', { on: form.type === 'usp_test' }]"
+                        @click="form.type = 'usp_test'">
+                  <span class="pick-title">USP 테스트</span>
+                  <span class="pick-sub">차별점 수용도 테스트</span>
+                </button>
               </div>
             </div>
 
-            <div class="modal-footer">
+            <div class="field">
+              <label>메모 <span class="opt">선택</span></label>
+              <textarea v-model="form.description" placeholder="이 테스트의 목적이나 맥락" rows="3"></textarea>
+            </div>
+
+            <div class="sheet-foot">
               <button class="btn-ghost" @click="showCreateModal = false">취소</button>
-              <button class="btn-primary" :disabled="!form.name.trim() || creating" @click="handleCreate">
-                <span v-if="creating" class="spinner-sm"></span>
+              <button class="btn-primary sm" :disabled="!form.name.trim() || creating" @click="handleCreate">
+                <span v-if="creating" class="spin"></span>
                 <span v-else>만들기</span>
               </button>
             </div>
@@ -146,18 +167,21 @@ const loading = ref(true)
 const creating = ref(false)
 const showCreateModal = ref(false)
 const nameInput = ref(null)
+const projectsEl = ref(null)
 const form = ref({ name: '', type: 'ad_reaction', description: '' })
+
+const today = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date())
 
 const loadProjects = async () => {
   loading.value = true
-  try {
-    const res = await listProjects()
-    projects.value = res.data.data
-  } catch (e) {
-    console.error(e)
-  } finally {
-    loading.value = false
-  }
+  try { projects.value = (await listProjects()).data.data } catch (e) { console.error(e) }
+  finally { loading.value = false }
+}
+
+const openCreate = async () => {
+  showCreateModal.value = true
+  await nextTick()
+  nameInput.value?.focus()
 }
 
 const handleCreate = async () => {
@@ -170,288 +194,531 @@ const handleCreate = async () => {
     await loadProjects()
   } catch (e) {
     alert('생성 실패: ' + (e.response?.data?.error || e.message))
-  } finally {
-    creating.value = false
-  }
+  } finally { creating.value = false }
 }
 
 const handleDelete = async (id) => {
-  if (!confirm('이 프로젝트와 모든 데이터가 삭제됩니다. 계속하시겠습니까?')) return
-  try {
-    await deleteProject(id)
-    await loadProjects()
-  } catch (e) {
-    alert('삭제 실패')
-  }
+  if (!confirm('이 프로젝트와 모든 데이터가 삭제됩니다.\n계속하시겠습니까?')) return
+  try { await deleteProject(id); await loadProjects() } catch (e) { alert('삭제 실패') }
 }
 
-const formatDate = (d) => {
-  if (!d) return ''
-  const date = new Date(d)
-  return new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }).format(date)
-}
+const scrollToList = () => projectsEl.value?.scrollIntoView({ behavior: 'smooth' })
 
-// Auto-focus name input when modal opens
-const openModal = () => {
-  showCreateModal.value = true
-  nextTick(() => nameInput.value?.focus())
-}
+const formatDate = (d) => d ? new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric' }).format(new Date(d)) : ''
 
 onMounted(loadProjects)
 </script>
 
 <style scoped>
-/* ── Design Tokens ── */
-:root {
-  --bg: #0c0f14;
-  --bg-raised: #141821;
-  --bg-card: #181d27;
-  --bg-hover: #1e2433;
-  --surface: #232a38;
-  --border: #2a3244;
-  --border-light: #1e2636;
-  --text: #e8eaf0;
-  --text-secondary: #8b93a6;
-  --text-muted: #5a6378;
-  --accent: #d4a053;
-  --accent-dim: rgba(212, 160, 83, 0.15);
-  --accent-glow: rgba(212, 160, 83, 0.3);
-  --danger: #e05252;
-  --type-ad: #5ea8d4;
-  --type-usp: #a87ed4;
-  --radius: 8px;
-  --font: 'IBM Plex Sans', 'Noto Sans KR', system-ui, sans-serif;
-  --mono: 'IBM Plex Mono', 'JetBrains Mono', monospace;
-}
-
-* { box-sizing: border-box; }
-.adsim-home {
+.page {
   min-height: 100vh;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font);
-  -webkit-font-smoothing: antialiased;
-}
-
-/* ── Topbar ── */
-.topbar {
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 32px;
-  border-bottom: 1px solid var(--border-light);
-  background: rgba(12, 15, 20, 0.85);
-  backdrop-filter: blur(12px);
-  position: sticky;
-  top: 0;
-  z-index: 50;
-}
-.topbar-left { display: flex; align-items: center; gap: 12px; }
-.logo { display: flex; align-items: center; gap: 8px; cursor: pointer; transition: opacity 0.2s; }
-.logo:hover { opacity: 0.8; }
-.logo-mark { color: var(--accent); font-size: 1rem; }
-.logo-text { font-family: var(--mono); font-weight: 600; font-size: 0.95rem; letter-spacing: 0.5px; }
-.logo-divider { width: 1px; height: 18px; background: var(--border); }
-.logo-sub { font-size: 0.78rem; color: var(--text-muted); }
-.status-pill { font-size: 0.72rem; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; font-family: var(--mono); }
-.pulse { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; animation: pulse-glow 2s infinite; }
-@keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(74,222,128,0.4); } 50% { box-shadow: 0 0 0 4px rgba(74,222,128,0); } }
-
-/* ── Hero ── */
-.hero {
-  padding: 72px 32px 56px;
-  display: flex;
-  align-items: center;
-  gap: 40px;
-  max-width: 1200px;
+  max-width: 1160px;
   margin: 0 auto;
-  position: relative;
+  padding: 0 40px 0;
 }
-.hero-inner { flex: 1; }
-.hero-label {
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  color: var(--accent);
+
+/* ─ Masthead ─ */
+.masthead {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 22px 0 18px;
+}
+.mast-mono {
+  font-family: var(--font-mono);
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 2px;
-  margin-bottom: 16px;
+  letter-spacing: 0.14em;
+  color: var(--ink-muted);
+}
+.mast-right { text-align: right; }
+.brand {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  font-variation-settings: 'opsz' 40, 'SOFT' 50;
+}
+.rule-line {
+  height: 1px;
+  background: var(--ink);
+  opacity: 0.85;
+}
+
+/* ─ Hero ─ */
+.hero {
+  padding: 80px 0 60px;
+  max-width: 860px;
+}
+.hero-eyebrow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
+  margin-bottom: 28px;
 }
-.hero-label::before { content: ''; width: 20px; height: 1px; background: var(--accent); }
+.eyebrow-line {
+  width: 36px;
+  height: 1px;
+  background: var(--accent);
+}
+.eyebrow-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--accent);
+}
 .hero-title {
-  font-size: 2.4rem;
-  font-weight: 600;
-  line-height: 1.35;
-  margin: 0 0 20px;
-  letter-spacing: -0.5px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(40px, 6vw, 76px);
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  margin: 0 0 28px;
+  color: var(--ink);
+  font-variation-settings: 'opsz' 144, 'SOFT' 30;
 }
-.accent { color: var(--accent); }
-.hero-desc {
-  font-size: 1rem;
-  line-height: 1.75;
-  color: var(--text-secondary);
-  max-width: 540px;
-  margin-bottom: 32px;
+.hero-italic {
+  font-style: italic;
+  color: var(--accent);
+  font-variation-settings: 'opsz' 144, 'SOFT' 100;
 }
-.hero-desc em { color: var(--text); font-style: normal; font-weight: 500; }
-.cta-btn {
+.hero-underline {
+  background-image: linear-gradient(var(--accent), var(--accent));
+  background-size: 100% 4px;
+  background-repeat: no-repeat;
+  background-position: 0 96%;
+  padding: 0 2px;
+}
+.hero-lede {
+  font-size: 19px;
+  line-height: 1.65;
+  color: var(--ink-soft);
+  max-width: 620px;
+  margin: 0 0 40px;
+}
+.hero-lede em {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+/* ─ Buttons ─ */
+.btn-primary {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  background: var(--ink);
+  color: var(--paper-raised);
+  border: none;
+  padding: 18px 28px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 15px;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  border-radius: var(--radius);
+  transition: background 0.2s, transform 0.1s;
+}
+.btn-primary:hover { background: var(--accent); }
+.btn-primary:active { transform: translateY(1px); }
+.btn-primary.sm { padding: 12px 22px; font-size: 14px; }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-primary svg { transition: transform 0.2s; }
+.btn-primary:hover svg { transform: translateX(3px); }
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 14px;
+  padding: 18px 0;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  text-decoration-color: var(--ink-faint);
+  transition: color 0.2s, text-decoration-color 0.2s;
+}
+.btn-link:hover {
+  color: var(--accent);
+  text-decoration-color: var(--accent);
+}
+
+.btn-ghost {
+  background: none;
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
+  padding: 12px 22px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 14px;
+  transition: border-color 0.2s, color 0.2s;
+}
+.btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
+
+/* ─ Features ─ */
+.features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  padding: 56px 0;
+  border-top: 1px solid var(--rule);
+}
+.feature {
+  padding: 32px 32px 32px 0;
+  border-right: 1px solid var(--rule);
+}
+.feature:last-child { border-right: none; padding-right: 0; }
+.feature:not(:first-child) { padding-left: 32px; }
+.feat-num {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 16px;
+  letter-spacing: 0.1em;
+}
+.feature h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 22px;
+  margin: 0 0 10px;
+  letter-spacing: -0.01em;
+  font-variation-settings: 'opsz' 40;
+}
+.feature p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+/* ─ Projects section ─ */
+.projects { padding: 56px 0 80px; }
+.sec-head {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.sec-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 44px;
+  letter-spacing: -0.02em;
+  margin: 0;
+  font-variation-settings: 'opsz' 144, 'SOFT' 30;
+}
+.sec-count {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+.state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 0;
+  color: var(--ink-muted);
+  font-size: 14px;
+}
+.dot-pulse {
+  width: 8px; height: 8px;
+  border-radius: 50%;
   background: var(--accent);
-  color: var(--bg);
-  border: none;
-  padding: 14px 28px;
-  font-family: var(--font);
-  font-weight: 600;
-  font-size: 0.95rem;
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: all 0.25s;
+  animation: pulse 1.2s infinite;
 }
-.cta-btn:hover { background: #e0b060; transform: translateY(-1px); box-shadow: 0 6px 20px var(--accent-glow); }
-.cta-btn:active { transform: translateY(0); }
-
-.hero-deco { flex-shrink: 0; }
-.deco-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.deco-cell {
-  width: 28px; height: 28px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  animation: cell-fade 3s infinite ease-in-out;
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.3); }
 }
-@keyframes cell-fade { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.4; border-color: var(--accent-dim); } }
 
-/* ── Projects ── */
-.projects-section { max-width: 1200px; margin: 0 auto; padding: 0 32px 80px; }
-.section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; border-top: 1px solid var(--border-light); padding-top: 32px; }
-.section-header h2 { font-size: 1.2rem; font-weight: 600; margin: 0; }
-.count-badge { font-family: var(--mono); font-size: 0.72rem; color: var(--text-muted); background: var(--surface); padding: 3px 10px; border-radius: 99px; }
+.empty {
+  text-align: center;
+  padding: 80px 0;
+}
+.empty-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 22px;
+  color: var(--ink-soft);
+  margin: 0 0 8px;
+  font-variation-settings: 'opsz' 40;
+}
+.empty-hint {
+  font-size: 14px;
+  color: var(--ink-muted);
+  margin: 0;
+}
 
-.loading-state { display: flex; align-items: center; gap: 12px; padding: 48px 0; color: var(--text-secondary); justify-content: center; }
-.spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.empty-state { text-align: center; padding: 64px 0; color: var(--text-muted); }
-.empty-icon { font-size: 2rem; margin-bottom: 12px; opacity: 0.4; }
-.empty-hint { font-size: 0.85rem; margin-top: 4px; }
-
-.project-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
-.project-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius);
-  padding: 24px;
+.project-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border-top: 1px solid var(--rule);
+}
+.project-row {
+  display: grid;
+  grid-template-columns: 56px 1fr 40px 32px;
+  gap: 20px;
+  align-items: center;
+  padding: 26px 0;
+  border-bottom: 1px solid var(--rule);
   cursor: pointer;
-  transition: all 0.25s;
-  position: relative;
+  transition: background 0.2s, padding 0.2s;
   outline: none;
+  position: relative;
 }
-.project-card:hover, .project-card:focus-visible { border-color: var(--accent-dim); background: var(--bg-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
-.card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
-.card-type-dot { width: 8px; height: 8px; border-radius: 50%; }
-.card-type-dot.ad_reaction { background: var(--type-ad); }
-.card-type-dot.usp_test { background: var(--type-usp); }
-.card-type-label { font-family: var(--mono); font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-.card-delete { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; border-radius: 4px; opacity: 0; transition: all 0.2s; }
-.project-card:hover .card-delete { opacity: 1; }
-.card-delete:hover { color: var(--danger); background: rgba(224,82,82,0.1); }
-.card-name { font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; }
-.card-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.card-footer { display: flex; justify-content: space-between; align-items: center; }
-.card-date { font-family: var(--mono); font-size: 0.72rem; color: var(--text-muted); }
-.card-arrow { color: var(--accent); font-size: 1.1rem; opacity: 0; transition: all 0.25s; }
-.project-card:hover .card-arrow { opacity: 1; transform: translateX(4px); }
-
-/* ── Modal ── */
-.modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(8px);
+.project-row:hover, .project-row:focus-visible {
+  background: var(--paper-raised);
+  padding-left: 16px;
+  padding-right: 16px;
+  margin: 0 -16px;
+}
+.row-idx {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-faint);
+  letter-spacing: 0.05em;
+}
+.row-main { min-width: 0; }
+.row-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 6px;
+}
+.row-type {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  padding: 3px 9px;
+  border-radius: 99px;
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
+}
+.row-type.ad_reaction { border-color: var(--type-a); color: var(--type-a); }
+.row-type.usp_test    { border-color: var(--type-b); color: var(--type-b); }
+.row-top time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+  letter-spacing: 0.05em;
+}
+.row-name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 24px;
+  margin: 0 0 4px;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  font-variation-settings: 'opsz' 40;
+}
+.row-desc {
+  font-size: 14px;
+  color: var(--ink-muted);
+  margin: 0;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+.row-del {
+  opacity: 0;
+  background: none;
+  border: 1px solid var(--rule);
+  color: var(--ink-muted);
+  border-radius: 50%;
+  width: 32px; height: 32px;
   display: flex; align-items: center; justify-content: center;
-  z-index: 200;
-  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-.modal {
-  background: #ffffff;
-  color: #1a1a2e;
-  border: none;
-  border-radius: 14px;
+.project-row:hover .row-del, .project-row:focus-within .row-del { opacity: 1; }
+.row-del:hover { border-color: var(--accent); color: var(--accent); }
+.row-arrow {
+  font-family: var(--font-display);
+  color: var(--ink-faint);
+  font-size: 22px;
+  transition: transform 0.2s, color 0.2s;
+}
+.project-row:hover .row-arrow { color: var(--accent); transform: translateX(4px); }
+
+/* ─ Footer ─ */
+.page-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 40px 0;
+  border-top: 1px solid var(--rule);
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+.foot-mono {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 14px;
+  font-variation-settings: 'opsz' 14;
+}
+
+/* ─ Modal ─ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 24, 21, 0.32);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 24px;
+}
+.sheet {
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
   width: 520px;
   max-width: 100%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+  padding: 32px 34px;
+  box-shadow: 0 32px 80px -20px rgba(26, 24, 21, 0.25);
 }
-.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 28px 28px 0; }
-.modal-header h2 { font-size: 1.25rem; font-weight: 700; margin: 0; color: #1a1a2e; }
-.modal-close { background: none; border: none; color: #999; cursor: pointer; padding: 4px; border-radius: 4px; }
-.modal-close:hover { color: #333; background: #f0f0f0; }
-.modal-body { padding: 24px 28px; }
-.modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 28px 24px; border-top: 1px solid #eee; }
+.sheet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.sheet-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+}
+.sheet-close {
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 6px 10px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+.sheet-close:hover { background: var(--paper-sunk); color: var(--ink); }
+.sheet-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 32px;
+  letter-spacing: -0.02em;
+  margin: 0 0 28px;
+  color: var(--ink);
+  line-height: 1.1;
+  font-variation-settings: 'opsz' 144, 'SOFT' 50;
+}
 
-.field { margin-bottom: 20px; position: relative; }
-.field label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; color: #444; }
-.required { color: #e05252; }
-.optional { color: #aaa; font-weight: 400; font-size: 0.8rem; }
+.field { margin-bottom: 22px; }
+.field label {
+  display: block;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+  letter-spacing: 0.01em;
+}
+.field .opt { font-weight: 400; color: var(--ink-faint); margin-left: 4px; }
 .field input, .field textarea {
   width: 100%;
-  background: #f8f8fa;
-  border: 1.5px solid #ddd;
-  color: #1a1a2e;
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  color: var(--ink);
   padding: 12px 14px;
-  font-family: var(--font);
-  font-size: 0.9rem;
-  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  border-radius: var(--radius);
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-.field input::placeholder, .field textarea::placeholder { color: #aaa; }
-.field input:focus, .field textarea:focus { border-color: #d4a053; box-shadow: 0 0 0 3px rgba(212,160,83,0.15); }
-.field textarea { resize: vertical; min-height: 72px; }
-.char-count { position: absolute; right: 10px; bottom: 10px; font-family: var(--mono); font-size: 0.65rem; color: #bbb; }
+.field input::placeholder, .field textarea::placeholder { color: var(--ink-faint); }
+.field input:focus, .field textarea:focus {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.field textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 
-.type-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.type-option {
-  background: #f8f8fa;
-  border: 2px solid #e0e0e0;
-  border-radius: 10px;
-  padding: 16px;
+.pick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pick-btn {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 16px 14px;
   cursor: pointer;
   text-align: left;
+  font-family: var(--font-body);
+  color: var(--ink);
   transition: all 0.2s;
-  color: #1a1a2e;
-  font-family: var(--font);
 }
-.type-option:hover { border-color: #bbb; background: #f0f0f5; }
-.type-option.active { border-color: #d4a053; background: rgba(212,160,83,0.08); box-shadow: 0 0 0 3px rgba(212,160,83,0.12); }
-.type-icon { font-size: 1.4rem; display: block; margin-bottom: 8px; }
-.type-label { display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 4px; color: #1a1a2e; }
-.type-help { display: block; font-size: 0.75rem; color: #888; line-height: 1.4; }
+.pick-btn:hover { border-color: var(--ink-muted); }
+.pick-btn.on {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper-raised);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.pick-title { display: block; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.pick-sub { display: block; font-size: 12px; color: var(--ink-muted); }
+.pick-btn.on .pick-sub { color: var(--paper-sunk); }
 
-.btn-ghost { background: none; border: 1px solid #ddd; color: #666; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-family: var(--font); font-size: 0.88rem; transition: all 0.2s; }
-.btn-ghost:hover { border-color: #999; color: #333; }
-.btn-primary { background: #1a1a2e; color: #fff; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-family: var(--font); font-size: 0.88rem; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
-.btn-primary:hover:not(:disabled) { background: #d4a053; }
-.btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
-.spinner-sm { width: 14px; height: 14px; border: 2px solid rgba(0,0,0,0.2); border-top-color: var(--bg); border-radius: 50%; animation: spin 0.6s linear infinite; }
+.sheet-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--rule);
+}
 
-/* ── Transitions ── */
-.modal-enter-active { transition: all 0.25s ease; }
-.modal-leave-active { transition: all 0.2s ease; }
+.spin {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.25);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.modal-enter-active, .modal-leave-active { transition: opacity 0.25s, transform 0.25s; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
-.modal-enter-from .modal, .modal-leave-to .modal { transform: scale(0.95) translateY(10px); }
+.modal-enter-from .sheet, .modal-leave-to .sheet { transform: translateY(12px) scale(0.98); }
 
-@media (max-width: 768px) {
-  .hero { flex-direction: column; padding: 48px 20px 40px; }
-  .hero-title { font-size: 1.7rem; }
-  .hero-deco { display: none; }
-  .project-list { grid-template-columns: 1fr; }
-  .topbar { padding: 0 16px; }
-  .projects-section { padding: 0 16px 60px; }
-  .type-selector { grid-template-columns: 1fr; }
+/* ─ Responsive ─ */
+@media (max-width: 820px) {
+  .page { padding: 0 20px; }
+  .features { grid-template-columns: 1fr; }
+  .feature { border-right: none; border-bottom: 1px solid var(--rule); padding: 24px 0; }
+  .feature:not(:first-child) { padding-left: 0; }
+  .feature:last-child { border-bottom: none; }
+  .hero { padding: 48px 0 40px; }
+  .hero-actions { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .project-row { grid-template-columns: 40px 1fr 24px; }
+  .row-del { display: none; }
+  .sec-title { font-size: 32px; }
 }
 </style>
