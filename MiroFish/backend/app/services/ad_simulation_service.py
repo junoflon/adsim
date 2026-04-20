@@ -69,8 +69,8 @@ def _run_single_agent(
         try:
             response = llm.chat(
                 messages=messages,
-                temperature=0.8,
-                max_tokens=400,
+                temperature=0.95,
+                max_tokens=500,
             )
         except Exception as e:
             logger.error(f"에이전트 {agent['name']} 라운드 {round_num} 실패: {e}")
@@ -121,7 +121,7 @@ def run_simulation(
     persona_config: Dict[str, Any],
     total_rounds: int,
     agent_count: int,
-    max_workers: int = 5,
+    max_workers: int = 3,
     seed_type: str = "ad_script",
 ) -> None:
     """
