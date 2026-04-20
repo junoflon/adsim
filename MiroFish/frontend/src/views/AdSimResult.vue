@@ -59,6 +59,55 @@
           <time>{{ formatDate(sim.completed_at) }} 완료</time>
         </header>
 
+        <!-- Script diagnosis -->
+        <section class="card script-card" v-if="report?.script_analysis">
+          <div class="script-head">
+            <span class="script-eyebrow">Script Diagnosis</span>
+            <h2>대본 진단</h2>
+            <p class="script-sub">에이전트 반응과 별개로, 대본 자체의 구성을 분석합니다.</p>
+          </div>
+
+          <div class="script-top">
+            <div class="script-field">
+              <span class="sf-label">핵심 메시지</span>
+              <p>{{ report.script_analysis.core_message }}</p>
+            </div>
+            <div class="script-field">
+              <span class="sf-label">훅 강도</span>
+              <p>{{ report.script_analysis.hook_strength }}</p>
+            </div>
+            <div class="script-field" v-if="report.script_analysis.tone">
+              <span class="sf-label">톤 키워드</span>
+              <div class="tone-chips">
+                <span v-for="(t, i) in toneArr" :key="i">{{ t }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="script-sw">
+            <div>
+              <h4>강점</h4>
+              <ul><li v-for="(x, i) in report.script_analysis.strengths" :key="i">{{ x }}</li></ul>
+            </div>
+            <div>
+              <h4>약점</h4>
+              <ul><li v-for="(x, i) in report.script_analysis.weaknesses" :key="i">{{ x }}</li></ul>
+            </div>
+          </div>
+
+          <div class="script-field" v-if="report.script_analysis.platform_fit">
+            <span class="sf-label">매체 적합성</span>
+            <p>{{ report.script_analysis.platform_fit }}</p>
+          </div>
+
+          <div class="script-field" v-if="report.script_analysis.risks?.length">
+            <span class="sf-label warn">⚠ 주의할 리스크</span>
+            <ul class="risk-list">
+              <li v-for="(r, i) in report.script_analysis.risks" :key="i">{{ r }}</li>
+            </ul>
+          </div>
+        </section>
+
         <!-- Sentiment -->
         <section class="card sent-card" v-if="report">
           <h2 class="card-title">전체 반응</h2>
@@ -184,6 +233,12 @@ const handleCancel = async () => {
 }
 
 const sentLabel = (s) => ({ positive: '긍정', negative: '부정', neutral: '중립' }[s] || s)
+const toneArr = computed(() => {
+  const t = report.value?.script_analysis?.tone
+  if (!t) return []
+  if (Array.isArray(t)) return t
+  return String(t).split(/[,·、]/).map(x => x.trim()).filter(Boolean)
+})
 const scoreColor = (s) => s > 0.3 ? 'var(--positive)' : s < -0.3 ? 'var(--negative)' : 'var(--neutral)'
 const formatDate = (d) => d ? new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(d)) : ''
 
@@ -287,6 +342,72 @@ onUnmounted(() => { if (poll) clearInterval(poll) })
   letter-spacing: -0.01em;
   color: var(--ink);
   font-variation-settings: 'opsz' 24, 'SOFT' 80;
+}
+
+/* Script diagnosis card */
+.script-card { border-left: 3px solid var(--ink); margin-bottom: 14px; padding: 32px; }
+.script-head { margin-bottom: 24px; }
+.script-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 8px;
+}
+.script-head h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 26px;
+  margin: 0 0 6px;
+  letter-spacing: -0.02em;
+}
+.script-sub { font-size: 13px; color: var(--ink-muted); margin: 0; line-height: 1.5; }
+
+.script-top { display: grid; grid-template-columns: 1fr; gap: 18px; margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--rule); }
+.script-field { }
+.sf-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.sf-label.warn { color: var(--ink); font-weight: 700; }
+.script-field p { font-size: 15px; line-height: 1.7; color: var(--ink); margin: 0; }
+
+.tone-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tone-chips span { font-size: 12px; padding: 4px 10px; background: var(--ink); color: var(--paper); border-radius: 99px; font-weight: 500; }
+
+.script-sw { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+.script-sw h4 {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+.script-sw ul { list-style: none; padding: 0; margin: 0; }
+.script-sw li { font-size: 14px; line-height: 1.65; color: var(--ink); padding: 4px 0 4px 14px; position: relative; }
+.script-sw li::before { content: ''; width: 5px; height: 5px; background: var(--ink); border-radius: 50%; position: absolute; left: 0; top: 12px; }
+.script-sw > div:last-child li::before { background: var(--paper); border: 1.5px solid var(--ink); }
+
+.risk-list { list-style: none; padding: 0; margin: 0; }
+.risk-list li {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink);
+  padding: 10px 14px;
+  background: var(--paper-sunk);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
 }
 
 .sent-card { margin-bottom: 14px; }

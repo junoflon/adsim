@@ -31,6 +31,11 @@ class AdSimDB:
             conn.execute("PRAGMA foreign_keys = ON")
             with open(cls.SCHEMA_PATH) as f:
                 conn.executescript(f.read())
+            # 마이그레이션: 기존 DB에 새 컬럼 추가 (IF NOT EXISTS 대신 try/except)
+            try:
+                conn.execute("ALTER TABLE adsim_reports ADD COLUMN script_analysis TEXT")
+            except sqlite3.OperationalError:
+                pass  # 이미 존재
             # 서버 재시작 시 running/pending 상태 시뮬레이션은 프로세스가 죽었으므로 실패로 처리
             # (백그라운드 스레드가 프로세스 라이프사이클에 묶여 있어 복구 불가)
             conn.execute(
@@ -264,15 +269,17 @@ class AdSimDB:
 
     @classmethod
     def save_report(cls, simulation_id: str, overall_sentiment: Dict, key_insights: List[str],
-                    concerns: List[str], recommendations: List[str], full_report_text: str) -> Dict[str, Any]:
+                    concerns: List[str], recommendations: List[str], full_report_text: str,
+                    script_analysis: Optional[Dict] = None) -> Dict[str, Any]:
         report_id = _generate_id("rpt")
         now = _now()
+        script_json = json.dumps(script_analysis, ensure_ascii=False) if script_analysis else None
         with cls._conn() as conn:
             conn.execute(
-                "INSERT INTO adsim_reports (report_id, simulation_id, overall_sentiment, key_insights, concerns, recommendations, full_report_text, created_at) VALUES (?,?,?,?,?,?,?,?)",
+                "INSERT INTO adsim_reports (report_id, simulation_id, overall_sentiment, key_insights, concerns, recommendations, full_report_text, script_analysis, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
                 (report_id, simulation_id, json.dumps(overall_sentiment, ensure_ascii=False),
                  json.dumps(key_insights, ensure_ascii=False), json.dumps(concerns, ensure_ascii=False),
-                 json.dumps(recommendations, ensure_ascii=False), full_report_text, now)
+                 json.dumps(recommendations, ensure_ascii=False), full_report_text, script_json, now)
             )
         return {"report_id": report_id, "simulation_id": simulation_id, "overall_sentiment": overall_sentiment, "created_at": now}
 
@@ -287,6 +294,13 @@ class AdSimDB:
         d["key_insights"] = json.loads(d["key_insights"])
         d["concerns"] = json.loads(d["concerns"])
         d["recommendations"] = json.loads(d["recommendations"])
+        if d.get("script_analysis"):
+            try:
+                d["script_analysis"] = json.loads(d["script_analysis"])
+            except Exception:
+                d["script_analysis"] = None
+        else:
+            d["script_analysis"] = None
         return d
 
     # ── A/B Comparisons ──

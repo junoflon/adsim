@@ -185,15 +185,20 @@ def run_simulation(
                 except Exception as e:
                     logger.error(f"에이전트 처리 실패: {e}")
 
-        # 4. 완료 처리
+        logger.info(f"시뮬레이션 에이전트 반응 수집 완료: {simulation_id}, 보고서 생성 시작")
+
+        # 4. 보고서 먼저 생성 (완료 표시 전에 — 프론트 race 방지)
+        from .ad_report_service import generate_report
+        try:
+            generate_report(simulation_id, seed_content, persona_config.get("name", "타겟"))
+        except Exception as e:
+            logger.error(f"보고서 생성 실패(계속 진행): {e}")
+
+        # 5. 완료 처리 — 보고서가 DB에 저장된 뒤에만 completed로 전환
         AdSimDB.update_simulation_status(
             simulation_id, "completed", current_round=total_rounds
         )
         logger.info(f"시뮬레이션 완료: {simulation_id}")
-
-        # 5. 보고서 생성 (import 지연: 순환 참조 방지)
-        from .ad_report_service import generate_report
-        generate_report(simulation_id, seed_content, persona_config.get("name", "타겟"))
 
     except Exception as e:
         logger.error(f"시뮬레이션 실패: {e}\n{traceback.format_exc()}")

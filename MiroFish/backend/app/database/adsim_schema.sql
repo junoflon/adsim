@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS adsim_reports (
     concerns TEXT NOT NULL,
     recommendations TEXT NOT NULL,
     full_report_text TEXT NOT NULL,
+    script_analysis TEXT,
     created_at TEXT NOT NULL,
     FOREIGN KEY(simulation_id) REFERENCES adsim_simulations(simulation_id) ON DELETE CASCADE
 );
