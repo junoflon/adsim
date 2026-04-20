@@ -72,25 +72,97 @@
         <div class="panel-head">
           <span class="panel-eyebrow">Step 02</span>
           <h1>누구에게 보여줄까요?</h1>
-          <p class="panel-lede">AI 에이전트가 이 집단의 특성으로 광고를 평가합니다.</p>
+          <p class="panel-lede">프리셋을 골라 시작하고, 필요하면 세부 조건을 직접 다듬으세요.</p>
         </div>
 
-        <div class="persona-grid">
-          <button v-for="(p, i) in presets" :key="i"
-                  :class="['p-card', { on: selectedPreset === i }]"
-                  @click="selectedPreset = i"
-                  type="button">
-            <span class="p-n">{{ String(i + 1).padStart(2, '0') }}</span>
-            <h3 class="p-name">{{ p.name }}</h3>
-            <span class="p-age">{{ p.age_range }}세</span>
-            <div class="p-tags">
-              <span v-for="(t, ti) in p.interests?.slice(0, 3)" :key="ti">{{ t }}</span>
+        <div class="tabs">
+          <button :class="['tab', { on: personaMode === 'preset' }]" @click="personaMode = 'preset'">프리셋 선택</button>
+          <button :class="['tab', { on: personaMode === 'custom' }]" @click="personaMode = 'custom'">직접 설정</button>
+        </div>
+
+        <!-- Preset mode -->
+        <div v-if="personaMode === 'preset'">
+          <div class="persona-grid">
+            <button v-for="(p, i) in presets" :key="i"
+                    :class="['p-card', { on: selectedPreset === i }]"
+                    @click="pickPreset(i)"
+                    type="button">
+              <span class="p-n">{{ String(i + 1).padStart(2, '0') }}</span>
+              <h3 class="p-name">{{ p.name }}</h3>
+              <span class="p-age">{{ p.age_range }}세 · {{ p.gender }}</span>
+              <div class="p-tags">
+                <span v-for="(t, ti) in p.interests?.slice(0, 3)" :key="ti">{{ t }}</span>
+              </div>
+              <p class="p-habit">{{ p.consumption_habits }}</p>
+              <span class="p-check" v-if="selectedPreset === i">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+            </button>
+          </div>
+          <p class="tab-hint" v-if="selectedPreset !== null">
+            프리셋을 선택했어요. 세부 조정이 필요하면 <button class="link-btn" @click="switchToCustom">직접 설정으로 전환</button>
+          </p>
+        </div>
+
+        <!-- Custom mode -->
+        <div v-else class="custom-panel">
+          <div class="cfield">
+            <label>페르소나 이름</label>
+            <input type="text" v-model="customPersona.name" placeholder="예: 3040 퇴근 후 편의점 애용층" maxlength="40" />
+          </div>
+
+          <div class="cgrid">
+            <div class="cfield">
+              <label>연령대</label>
+              <div class="range-pair">
+                <input type="number" v-model.number="customPersona.ageMin" min="15" max="80" />
+                <span>~</span>
+                <input type="number" v-model.number="customPersona.ageMax" min="15" max="80" />
+                <span class="suffix">세</span>
+              </div>
             </div>
-            <p class="p-habit">{{ p.consumption_habits }}</p>
-            <span class="p-check" v-if="selectedPreset === i">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            </span>
-          </button>
+            <div class="cfield">
+              <label>성별 구성</label>
+              <div class="gender-split">
+                <div class="split-track">
+                  <div class="split-fill f" :style="{ width: customPersona.femaleRatio + '%' }"></div>
+                </div>
+                <div class="split-nums">
+                  <span>여 {{ customPersona.femaleRatio }}%</span>
+                  <input type="range" v-model.number="customPersona.femaleRatio" min="0" max="100" step="10" />
+                  <span>남 {{ 100 - customPersona.femaleRatio }}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cfield">
+            <label>관심사 · 라이프스타일</label>
+            <div class="chips">
+              <button v-for="interest in allInterests" :key="interest" type="button"
+                      :class="['chip', { on: customPersona.interests.includes(interest) }]"
+                      @click="toggleInterest(interest)">{{ interest }}</button>
+            </div>
+            <div class="chip-input">
+              <input type="text" v-model="newInterest" placeholder="직접 추가 (엔터)" @keydown.enter.prevent="addCustomInterest" />
+            </div>
+          </div>
+
+          <div class="cfield">
+            <label>소비 습관 · 맥락</label>
+            <textarea v-model="customPersona.consumption_habits" rows="3"
+                      placeholder="예: 편의점 음료를 주 3회 이상 구매. 새로운 맛이나 건강 기능성 제품에 관심이 많고, 가격은 2,000~3,500원을 적정선으로 봄."></textarea>
+            <p class="field-hint">구체적일수록 에이전트가 해당 상황을 반영합니다.</p>
+          </div>
+
+          <div class="cfield">
+            <label>성격 강조 (선택)</label>
+            <div class="chips">
+              <button v-for="pt in personalityPresets" :key="pt" type="button"
+                      :class="['chip', { on: customPersona.personalityTags.includes(pt) }]"
+                      @click="togglePersonality(pt)">{{ pt }}</button>
+            </div>
+          </div>
         </div>
 
         <div class="slider-card">
@@ -114,7 +186,7 @@
 
         <div class="panel-nav">
           <button class="back-btn" @click="currentStep = 0">← 이전</button>
-          <button class="next-btn" :disabled="selectedPreset === null" @click="currentStep = 2">
+          <button class="next-btn" :disabled="!personaReady" @click="currentStep = 2">
             실행 설정 →
           </button>
         </div>
@@ -135,7 +207,7 @@
           </div>
           <div>
             <dt>타겟 페르소나</dt>
-            <dd>{{ selectedPreset !== null ? presets[selectedPreset]?.name : '미선택' }}</dd>
+            <dd>{{ activePersonaSummary }}</dd>
           </div>
           <div>
             <dt>에이전트</dt>
@@ -195,7 +267,75 @@ const steps = [
   { label: '실행' },
 ]
 
-const canRun = computed(() => seeds.value.length > 0 && selectedPreset.value !== null)
+const personaMode = ref('preset') // 'preset' | 'custom'
+const newInterest = ref('')
+const customPersona = ref({
+  name: '',
+  ageMin: 25,
+  ageMax: 40,
+  femaleRatio: 50,
+  interests: [],
+  consumption_habits: '',
+  personalityTags: [],
+})
+const allInterests = [
+  '건강', '다이어트', '운동', '뷰티', '패션', '육아', '커피', '편의점',
+  '맛집', '여행', 'SNS', '게임', '독서', '재테크', '자기계발', '반려동물',
+  '친환경', '명품', '가성비', '신제품',
+]
+const personalityPresets = [
+  '신중함', '트렌드 민감', '가성비 추구', '프리미엄 선호',
+  '의심 많음', '입소문 전파', '충동구매 성향', '브랜드 충성',
+]
+
+const canRun = computed(() => {
+  if (seeds.value.length === 0) return false
+  if (personaMode.value === 'preset') return selectedPreset.value !== null
+  return !!customPersona.value.name.trim() && customPersona.value.interests.length > 0
+})
+
+const pickPreset = (i) => { selectedPreset.value = i }
+const switchToCustom = () => {
+  if (selectedPreset.value !== null) {
+    const p = presets.value[selectedPreset.value]
+    const [mn, mx] = (p.age_range || '25-40').split('-').map(x => parseInt(x) || 30)
+    const fMatch = /여성\s*(\d+)/.exec(p.gender || '')
+    customPersona.value = {
+      name: p.name,
+      ageMin: mn, ageMax: mx,
+      femaleRatio: fMatch ? parseInt(fMatch[1]) : 50,
+      interests: [...(p.interests || [])],
+      consumption_habits: p.consumption_habits || '',
+      personalityTags: [],
+    }
+  }
+  personaMode.value = 'custom'
+}
+const toggleInterest = (x) => {
+  const arr = customPersona.value.interests
+  const idx = arr.indexOf(x)
+  if (idx >= 0) arr.splice(idx, 1); else arr.push(x)
+}
+const togglePersonality = (x) => {
+  const arr = customPersona.value.personalityTags
+  const idx = arr.indexOf(x)
+  if (idx >= 0) arr.splice(idx, 1); else arr.push(x)
+}
+const addCustomInterest = () => {
+  const v = newInterest.value.trim()
+  if (v && !customPersona.value.interests.includes(v)) customPersona.value.interests.push(v)
+  newInterest.value = ''
+}
+const personaReady = computed(() => {
+  if (personaMode.value === 'preset') return selectedPreset.value !== null
+  return !!customPersona.value.name.trim() && customPersona.value.interests.length > 0
+})
+const activePersonaSummary = computed(() => {
+  if (personaMode.value === 'preset') return selectedPreset.value !== null ? presets.value[selectedPreset.value]?.name : '미선택'
+  if (!customPersona.value.name) return '미선택'
+  const c = customPersona.value
+  return `${c.name} (${c.ageMin}-${c.ageMax}세 · 여 ${c.femaleRatio}% / 남 ${100 - c.femaleRatio}%)`
+})
 
 const ledeText = computed(() => {
   const t = project.value?.type
@@ -248,8 +388,24 @@ const handleRun = async () => {
   if (!canRun.value || running.value) return
   running.value = true
   try {
-    const preset = presets.value[selectedPreset.value]
-    const personaRes = await createPersona(projectId, { ...preset, agent_count: agentCount.value, is_preset: true })
+    let personaPayload
+    if (personaMode.value === 'preset') {
+      const preset = presets.value[selectedPreset.value]
+      personaPayload = { ...preset, agent_count: agentCount.value, is_preset: true }
+    } else {
+      const c = customPersona.value
+      const habits = c.consumption_habits + (c.personalityTags.length ? ` · 성격 성향: ${c.personalityTags.join(', ')}` : '')
+      personaPayload = {
+        name: c.name,
+        age_range: `${c.ageMin}-${c.ageMax}`,
+        gender: `여성 ${c.femaleRatio}%, 남성 ${100 - c.femaleRatio}%`,
+        interests: c.interests,
+        consumption_habits: habits.trim(),
+        agent_count: agentCount.value,
+        is_preset: false,
+      }
+    }
+    const personaRes = await createPersona(projectId, personaPayload)
     const simRes = await startSimulation(projectId, {
       seed_id: seeds.value[0].seed_id,
       persona_id: personaRes.data.data.persona_id,
@@ -514,6 +670,151 @@ const handleRun = async () => {
 .list-enter-active, .list-leave-active { transition: all 0.3s; }
 .list-enter-from { opacity: 0; transform: translateX(-8px); }
 .list-leave-to { opacity: 0; transform: translateX(8px); }
+
+/* ─ Tabs ─ */
+.tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--rule);
+}
+.tab {
+  background: none;
+  border: none;
+  padding: 12px 18px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.2s, border-color 0.2s;
+}
+.tab:hover { color: var(--ink); }
+.tab.on {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+.tab-hint {
+  margin: 16px 0 0;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.link-btn:hover { color: var(--accent); }
+
+/* ─ Custom persona panel ─ */
+.custom-panel {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  margin-bottom: 40px;
+}
+.cgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.cfield { margin-bottom: 20px; }
+.cfield:last-child { margin-bottom: 0; }
+.cfield label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-muted);
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+.cfield input[type="text"], .cfield input[type="number"], .cfield textarea {
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  color: var(--ink);
+  padding: 10px 14px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  border-radius: var(--radius);
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+.cfield input:focus, .cfield textarea:focus {
+  border-color: var(--ink);
+  background: var(--paper-card);
+}
+.cfield input::placeholder, .cfield textarea::placeholder { color: var(--ink-faint); }
+.cfield textarea { min-height: 72px; line-height: 1.6; resize: vertical; }
+.field-hint { font-size: 12px; color: var(--ink-muted); margin: 8px 0 0; }
+
+.range-pair {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.range-pair input[type="number"] { width: 80px; text-align: center; }
+.range-pair span { color: var(--ink-muted); font-size: 14px; }
+.range-pair .suffix { font-size: 13px; color: var(--ink-faint); margin-left: 2px; }
+
+.gender-split { margin-top: 4px; }
+.split-track {
+  height: 6px;
+  background: var(--paper-sunk);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  border: 1px solid var(--rule);
+}
+.split-fill { height: 100%; background: var(--ink); transition: width 0.3s; }
+.split-nums { display: grid; grid-template-columns: 70px 1fr 70px; gap: 10px; align-items: center; font-size: 12px; color: var(--ink-soft); font-family: var(--font-mono); }
+.split-nums input[type="range"] { appearance: none; height: 2px; background: var(--rule); border-radius: 1px; outline: none; }
+.split-nums input[type="range"]::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); border: 2px solid var(--paper-card); box-shadow: 0 0 0 1px var(--ink); cursor: pointer; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
+  padding: 7px 13px;
+  border-radius: 99px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chip:hover { border-color: var(--ink-muted); color: var(--ink); }
+.chip.on {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+.chip-input { margin-top: 10px; }
+.chip-input input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--rule);
+  padding: 6px 2px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink);
+  outline: none;
+}
+.chip-input input:focus { border-bottom-color: var(--ink); }
 
 /* ─ Persona grid ─ */
 .persona-grid {

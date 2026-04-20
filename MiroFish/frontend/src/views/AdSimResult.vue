@@ -154,11 +154,9 @@ const load = async () => {
     sim.value = (await getSimulation(simulationId)).data.data
     if (sim.value.status === 'completed') {
       if (poll) { clearInterval(poll); poll = null }
-      try {
-        const [rpt, resp] = await Promise.all([getReport(simulationId), listResponses(simulationId)])
-        report.value = rpt.data.data
-        responses.value = resp.data.data.responses || []
-      } catch (_) {}
+      // 독립 fetch: 한쪽이 실패해도 다른 쪽은 살아남도록
+      getReport(simulationId).then(r => { report.value = r.data.data }).catch(e => console.error('report load fail', e))
+      listResponses(simulationId).then(r => { responses.value = r.data.data.responses || [] }).catch(e => console.error('responses load fail', e))
     } else if (sim.value.status === 'failed' && poll) { clearInterval(poll); poll = null }
   } catch (e) { console.error(e) }
 }
