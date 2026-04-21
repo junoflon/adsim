@@ -14,7 +14,7 @@ from ..services.ad_comparison_service import run_comparison
 
 adsim_bp = Blueprint('adsim', __name__, url_prefix='/api/adsim')
 
-ALLOWED_EXTENSIONS = {'pdf', 'txt', 'md', 'docx', 'hwp', 'hwpx'}
+ALLOWED_EXTENSIONS = {'pdf', 'txt', 'md', 'docx', 'hwp', 'hwpx', 'xlsx', 'csv'}
 MAX_CONTENT_CHARS = 20000
 
 

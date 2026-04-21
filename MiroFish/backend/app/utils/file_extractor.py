@@ -27,6 +27,10 @@ def extract_text(file_path: str, max_chars: int = 20000) -> str:
             text = _from_hwp(file_path)
         elif ext == "hwpx":
             text = _from_hwpx(file_path)
+        elif ext == "xlsx":
+            text = _from_xlsx(file_path)
+        elif ext == "csv":
+            text = _from_csv(file_path)
         elif ext in ("txt", "md"):
             text = _from_text(file_path)
         else:
@@ -103,6 +107,48 @@ def _from_hwpx(path: str) -> str:
                     parts.extend(m for m in matches if m.strip())
                 except Exception:
                     continue
+    return "\n".join(parts)
+
+
+def _from_xlsx(path: str) -> str:
+    """엑셀 파일의 모든 시트를 읽어 '시트명 | 헤더 | row' 형태로 정리."""
+    from openpyxl import load_workbook  # type: ignore
+    wb = load_workbook(filename=path, data_only=True, read_only=True)
+    parts = []
+    try:
+        for sheet in wb.worksheets:
+            parts.append(f"## 시트: {sheet.title}")
+            rows_out = []
+            for row in sheet.iter_rows(values_only=True):
+                cells = [str(c).strip() if c is not None else "" for c in row]
+                # 완전 빈 행 건너뛰기
+                if not any(cells):
+                    continue
+                rows_out.append(" | ".join(cells))
+                # 시트당 최대 500행까지만 (너무 큰 엑셀 폭주 방지)
+                if len(rows_out) >= 500:
+                    rows_out.append("... (이하 생략)")
+                    break
+            parts.extend(rows_out)
+            parts.append("")
+    finally:
+        wb.close()
+    return "\n".join(parts)
+
+
+def _from_csv(path: str) -> str:
+    """CSV를 표 형태 텍스트로 변환."""
+    import csv
+    raw = _from_text(path)  # 인코딩 감지
+    reader = csv.reader(raw.splitlines())
+    parts = []
+    for i, row in enumerate(reader):
+        cells = [c.strip() for c in row]
+        if any(cells):
+            parts.append(" | ".join(cells))
+        if i >= 1000:
+            parts.append("... (이하 생략)")
+            break
     return "\n".join(parts)
 
 

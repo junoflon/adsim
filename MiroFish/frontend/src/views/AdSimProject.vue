@@ -55,10 +55,10 @@
         <div class="attach-block" v-if="supportsAttachments">
           <div class="attach-row">
             <label class="attach-file">
-              <input type="file" accept=".pdf,.hwp,.hwpx,.docx,.txt,.md" @change="onFilePick" />
+              <input type="file" accept=".pdf,.hwp,.hwpx,.docx,.xlsx,.csv,.txt,.md" @change="onFilePick" />
               <span class="attach-btn">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-                {{ attachedFile ? attachedFile.name : '파일 첨부 (PDF · HWP · DOCX)' }}
+                {{ attachedFile ? attachedFile.name : '파일 첨부 (PDF · HWP · DOCX · XLSX · CSV)' }}
               </span>
               <button v-if="attachedFile" type="button" class="attach-clear" @click.prevent="clearFile">✕</button>
             </label>
