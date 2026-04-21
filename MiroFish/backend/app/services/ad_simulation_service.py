@@ -55,6 +55,7 @@ def _run_single_agent(
     else:
         system_prompt = create_ad_consumer_system_prompt(agent)
         make_user_prompt = create_ad_evaluation_user_prompt
+    logger.info(f"[agent {agent['agent_id']}/{agent['name']}] 시작")
     conversation_log = []
     previous_reactions = ""
 
@@ -80,13 +81,16 @@ def _run_single_agent(
         messages.append({"role": "user", "content": user_prompt})
 
         try:
+            import time as _t
+            t0 = _t.time()
             response = llm.chat(
                 messages=messages,
                 temperature=0.95,
                 max_tokens=500,
             )
+            logger.info(f"[agent {agent['agent_id']}/{agent['name']}] 라운드 {round_num} 완료 ({_t.time()-t0:.1f}s)")
         except Exception as e:
-            logger.error(f"에이전트 {agent['name']} 라운드 {round_num} 실패: {e}")
+            logger.error(f"[agent {agent['agent_id']}/{agent['name']}] 라운드 {round_num} 실패: {type(e).__name__}: {e}")
             response = "(응답 실패)"
 
         conversation_log.append({
