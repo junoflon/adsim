@@ -25,6 +25,8 @@ camel-ai==0.2.78
 PyMuPDF>=1.24.0
 # DOCX 읽기
 python-docx>=1.1.0
+# XLSX 읽기
+openpyxl>=3.1.0
 # HWP 읽기 (한글 파일)
 olefile>=0.47
 # 编码检测（支持非UTF-8编码的文本文件）
