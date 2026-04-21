@@ -39,10 +39,16 @@ def main():
     # 获取运行配置
     host = os.environ.get('FLASK_HOST', '0.0.0.0')
     port = int(os.environ.get('FLASK_PORT', 5001))
-    debug = Config.DEBUG
-    
+    # Railway(프로덕션)에선 debug 강제 비활성화 — 리로더가 백그라운드 스레드를 죽이는 문제 방지
+    is_railway = bool(os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RAILWAY_SERVICE_ID'))
+    flask_debug_env = os.environ.get('FLASK_DEBUG', '').lower()
+    if is_railway or flask_debug_env == 'false':
+        debug = False
+    else:
+        debug = Config.DEBUG
+
     # 启动服务
-    app.run(host=host, port=port, debug=debug, threaded=True)
+    app.run(host=host, port=port, debug=debug, threaded=True, use_reloader=debug)
 
 
 if __name__ == '__main__':

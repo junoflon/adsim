@@ -28,7 +28,8 @@ class LLMClient:
         if not self.api_key:
             raise ValueError("LLM_API_KEY가 설정되지 않았습니다 (.env 파일에서 ANTHROPIC API 키를 설정하세요)")
 
-        self.client = Anthropic(api_key=self.api_key)
+        # 타임아웃 60초로 제한 — 훅이 멈추지 않도록
+        self.client = Anthropic(api_key=self.api_key, timeout=60.0)
 
     def _split_system_and_messages(
         self, messages: List[Dict[str, str]]
