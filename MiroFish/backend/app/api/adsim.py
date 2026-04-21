@@ -387,6 +387,52 @@ def list_rounds(simulation_id):
     return _ok(AdSimDB.list_rounds(simulation_id))
 
 
+@adsim_bp.route('/simulations/<simulation_id>/responses.csv', methods=['GET'])
+def export_responses_csv(simulation_id):
+    """에이전트별 응답을 CSV로 내보내기"""
+    import csv
+    import io
+    from flask import Response as FlaskResponse
+
+    responses = AdSimDB.list_responses(simulation_id)
+    if not responses:
+        return _err("응답이 없습니다", 404)
+
+    output = io.StringIO()
+    # UTF-8 BOM: 엑셀에서 한글 깨짐 방지
+    output.write('\ufeff')
+    writer = csv.writer(output)
+    writer.writerow([
+        'agent_id', 'agent_name', 'sentiment', 'sentiment_score',
+        'key_reactions', 'age', 'gender', 'occupation', 'life_context',
+        'decision_style', 'speaking_style', 'interests', 'income_level'
+    ])
+    for r in responses:
+        p = r.get('agent_persona', {}) or {}
+        writer.writerow([
+            r.get('agent_id', ''),
+            r.get('agent_name', ''),
+            r.get('sentiment', ''),
+            r.get('sentiment_score', ''),
+            ' · '.join(r.get('key_reactions', []) or []),
+            p.get('age', ''),
+            p.get('gender', ''),
+            p.get('occupation', ''),
+            p.get('life_context', ''),
+            p.get('decision_style', ''),
+            p.get('speaking_style', ''),
+            ', '.join(p.get('interests', []) or []),
+            p.get('income_level', ''),
+        ])
+    csv_data = output.getvalue()
+    filename = f"adsim_{simulation_id}_responses.csv"
+    return FlaskResponse(
+        csv_data,
+        mimetype='text/csv; charset=utf-8',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+    )
+
+
 # ── A/B Comparisons ──
 
 @adsim_bp.route('/projects/<project_id>/comparisons', methods=['POST'])

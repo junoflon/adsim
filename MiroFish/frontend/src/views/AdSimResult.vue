@@ -41,6 +41,26 @@
         </div>
 
         <button class="cancel-btn" @click="handleCancel">시뮬레이션 취소</button>
+
+        <!-- 라이브 반응 피드 -->
+        <section class="live-feed" v-if="responses.length">
+          <div class="feed-head">
+            <span class="feed-eyebrow">Live Feed</span>
+            <h3>방금 도착한 반응 <span>{{ responses.length }}명</span></h3>
+          </div>
+          <ul class="feed-list">
+            <li v-for="r in recentResponses" :key="r.response_id" class="feed-item">
+              <span class="feed-avatar" :class="r.sentiment">{{ r.agent_name?.charAt(0) }}</span>
+              <div class="feed-body">
+                <div class="feed-meta">
+                  <strong>{{ r.agent_name }}</strong>
+                  <span :class="['feed-pill', r.sentiment]">{{ sentLabel(r.sentiment) }}</span>
+                </div>
+                <div class="feed-react">{{ r.key_reactions?.slice(0, 2).join(' · ') }}</div>
+              </div>
+            </li>
+          </ul>
+        </section>
       </div>
 
       <!-- Failed -->
@@ -54,7 +74,23 @@
       <!-- Completed -->
       <div v-else-if="sim.status === 'completed'" class="result">
         <header class="result-head">
-          <span class="panel-eyebrow">Report</span>
+          <div class="head-top">
+            <span class="panel-eyebrow">Report</span>
+            <div class="head-actions no-print">
+              <button class="act-btn" @click="handleShare" :title="shareCopied ? '복사됨!' : '링크 복사'">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+                {{ shareCopied ? '링크 복사됨' : '링크 복사' }}
+              </button>
+              <a class="act-btn" :href="csvUrl" download>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                CSV
+              </a>
+              <button class="act-btn primary" @click="handlePrint">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                PDF 저장
+              </button>
+            </div>
+          </div>
           <h1>분석 결과</h1>
           <time>{{ formatDate(sim.completed_at) }} 완료</time>
         </header>
@@ -210,11 +246,11 @@ const load = async () => {
   try {
     sim.value = (await getSimulation(simulationId)).data.data
     notFound.value = false
+    // 진행 중/완료 구분 없이 responses 폴링 (라이브 피드)
+    listResponses(simulationId).then(r => { responses.value = r.data.data.responses || [] }).catch(() => {})
     if (sim.value.status === 'completed') {
       if (poll) { clearInterval(poll); poll = null }
-      // 독립 fetch: 한쪽이 실패해도 다른 쪽은 살아남도록
       getReport(simulationId).then(r => { report.value = r.data.data }).catch(e => console.error('report load fail', e))
-      listResponses(simulationId).then(r => { responses.value = r.data.data.responses || [] }).catch(e => console.error('responses load fail', e))
     } else if (sim.value.status === 'failed' && poll) { clearInterval(poll); poll = null }
   } catch (e) {
     if (e.response?.status === 404) {
@@ -225,6 +261,25 @@ const load = async () => {
     }
   }
 }
+
+const shareCopied = ref(false)
+const csvUrl = computed(() => `/api/adsim/simulations/${simulationId}/responses.csv`)
+const handleShare = async () => {
+  try {
+    await navigator.clipboard.writeText(window.location.href)
+    shareCopied.value = true
+    setTimeout(() => { shareCopied.value = false }, 2000)
+  } catch {
+    prompt('이 링크를 복사해서 공유하세요:', window.location.href)
+  }
+}
+const handlePrint = () => {
+  window.print()
+}
+const recentResponses = computed(() => {
+  // 라이브 피드에 최근 12개
+  return [...responses.value].reverse().slice(0, 12)
+})
 
 const handleCancel = async () => {
   if (!confirm('시뮬레이션을 취소하시겠습니까?')) return
@@ -313,6 +368,95 @@ onUnmounted(() => { if (poll) clearInterval(poll) })
 
 .next-btn { background: var(--ink); color: var(--paper-raised); border: none; padding: 14px 26px; border-radius: var(--radius); cursor: pointer; font-family: var(--font-body); font-weight: 500; font-size: 14px; transition: background 0.2s; }
 .next-btn:hover { background: var(--accent); }
+
+/* Live feed (running) */
+.live-feed {
+  margin-top: 48px;
+  text-align: left;
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+.feed-head { margin-bottom: 16px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.feed-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--ink);
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 3px 10px;
+  border: 1px solid var(--ink);
+  border-radius: 99px;
+}
+.feed-head h3 { font-size: 17px; margin: 0; font-weight: 600; color: var(--ink); }
+.feed-head h3 span { font-family: var(--font-mono); font-size: 12px; font-weight: 400; color: var(--ink-muted); margin-left: 6px; }
+.feed-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.feed-item {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--paper-raised);
+  border-radius: var(--radius);
+  animation: slide-in 0.3s;
+}
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.feed-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: 14px;
+  background: var(--paper-sunk); color: var(--ink);
+  border: 1px solid var(--rule);
+}
+.feed-avatar.positive { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.feed-avatar.negative { background: var(--paper); color: var(--ink); border: 2px solid var(--ink); }
+.feed-body { min-width: 0; }
+.feed-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+.feed-meta strong { font-size: 13px; color: var(--ink); font-weight: 600; }
+.feed-pill {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 99px;
+  letter-spacing: 0.08em;
+  border: 1px solid var(--rule);
+  color: var(--ink-muted);
+}
+.feed-pill.positive { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.feed-pill.negative { border-color: var(--ink); color: var(--ink); }
+.feed-react { font-size: 12px; color: var(--ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Result head actions */
+.head-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+.head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.act-btn {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  color: var(--ink);
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.act-btn:hover { border-color: var(--ink); background: var(--paper-raised); }
+.act-btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.act-btn.primary:hover { background: var(--ink-soft); }
 
 /* Result */
 .result-head { margin-bottom: 40px; }
@@ -528,5 +672,19 @@ onUnmounted(() => { if (poll) clearInterval(poll) })
   .agent-list li { grid-template-columns: 30px 1fr 56px 20px; font-size: 13px; }
   .ag-score, .ag-react { display: none; }
   .result-head h1 { font-size: 36px; }
+  .head-top { flex-direction: column; align-items: flex-start; }
 }
+
+/* 인쇄(PDF 저장) 전용 스타일 */
+@media print {
+  .topbar, .rule-line, .no-print, .bottom-nav, .cancel-btn { display: none !important; }
+  .page { max-width: 100%; padding: 0 !important; }
+  .wrap { padding: 0 !important; }
+  body { background: #fff !important; }
+  .card, .script-card, .sc-col, .swot-card, .winner { break-inside: avoid; page-break-inside: avoid; border: 1px solid #ccc !important; box-shadow: none !important; }
+  .result-head h1 { font-size: 28px; }
+  .agent-list li { break-inside: avoid; }
+  a { color: inherit !important; text-decoration: none !important; }
+}
+
 </style>
