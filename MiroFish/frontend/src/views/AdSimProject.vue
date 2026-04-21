@@ -35,6 +35,31 @@
           <p class="panel-lede">{{ ledeText }}</p>
         </div>
 
+        <!-- 첨부 파일 & 참조 링크 (제품/브랜드 가설만) — 주 진입점이므로 상단 배치 -->
+        <div class="attach-block prominent" v-if="supportsAttachments">
+          <label class="prominent-drop" :class="{ loading: uploading }">
+            <input type="file" accept=".pdf,.hwp,.hwpx,.docx,.xlsx,.csv,.txt,.md" @change="onFilePick" :disabled="uploading" />
+            <div class="drop-inner">
+              <svg v-if="!uploading" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+              <span v-else class="spin big"></span>
+              <div class="drop-copy">
+                <strong>{{ uploading ? '파일 읽는 중…' : '파일 첨부' }}</strong>
+                <span>{{ uploading ? '잠시만요' : 'PDF · HWP · DOCX · XLSX · CSV · TXT — 클릭하면 자동 등록' }}</span>
+              </div>
+            </div>
+          </label>
+          <div class="attach-row" v-if="project.type === 'brand_hypothesis'">
+            <label class="attach-url">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.72M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.72-1.72"/></svg>
+              <input type="url" v-model="referenceUrl"
+                     placeholder="노션 · 구글 독스 · Figma 등 참조 링크 (선택)"
+                     @keydown.enter.prevent="handleAddUrlSeed" />
+              <button v-if="referenceUrl.trim()" type="button" class="url-add-btn" :disabled="uploading" @click.prevent="handleAddUrlSeed">링크 등록</button>
+            </label>
+          </div>
+          <div class="or-sep"><span>또는 직접 타이핑</span></div>
+        </div>
+
         <div class="editor">
           <textarea v-model="seedContent"
                     :placeholder="placeholderText"
@@ -44,31 +69,10 @@
             <span class="char-n" :class="{ warn: seedContent.length > 18000 }">
               {{ seedContent.length.toLocaleString() }} / 20,000
             </span>
-            <button class="add-btn" :disabled="!canUpload || uploading" @click="handleUploadSeed">
+            <button class="add-btn" :disabled="!seedContent.trim() || uploading" @click="handleUploadSeed">
               <span v-if="uploading" class="spin"></span>
-              <span v-else>{{ seeds.length > 0 ? '+ 추가 업로드' : '업로드하기' }}</span>
+              <span v-else>{{ seeds.length > 0 ? '+ 내용 추가' : '텍스트 등록' }}</span>
             </button>
-          </div>
-        </div>
-
-        <!-- 첨부 파일 & 참조 링크 (제품/브랜드 가설만) -->
-        <div class="attach-block" v-if="supportsAttachments">
-          <div class="attach-row">
-            <label class="attach-file">
-              <input type="file" accept=".pdf,.hwp,.hwpx,.docx,.xlsx,.csv,.txt,.md" @change="onFilePick" />
-              <span class="attach-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-                {{ attachedFile ? attachedFile.name : '파일 첨부 (PDF · HWP · DOCX · XLSX · CSV)' }}
-              </span>
-              <button v-if="attachedFile" type="button" class="attach-clear" @click.prevent="clearFile">✕</button>
-            </label>
-          </div>
-          <div class="attach-row" v-if="project.type === 'brand_hypothesis'">
-            <label class="attach-url">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.72M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.72-1.72"/></svg>
-              <input type="url" v-model="referenceUrl"
-                     placeholder="노션 · 구글 독스 · Figma 등 참조 링크 (선택)" />
-            </label>
           </div>
         </div>
 
@@ -432,8 +436,8 @@ const activePersonaSummary = computed(() => {
 
 const ledeText = computed(() => {
   const t = project.value?.type
-  if (t === 'brand_hypothesis') return '브랜드 기획서·스토리·비주얼 자료를 올려주세요. 문서를 정성스럽게 읽고 타겟 공감도를 평가합니다.'
-  if (t === 'product_hypothesis') return '제품 컨셉·기획서·스펙 문서를 올려주세요. 타겟에게 실제로 필요한 제품인지 검증합니다.'
+  if (t === 'brand_hypothesis') return '브랜드 기획서·스토리 자료를 올려주세요. 파일만 첨부해도 바로 진행됩니다. 문서를 정성스럽게 읽고 타겟 공감도를 평가합니다.'
+  if (t === 'product_hypothesis') return '제품 컨셉·기획서·스펙 문서를 올려주세요. 파일만 첨부해도 바로 진행됩니다. 타겟에게 실제로 필요한 제품인지 검증합니다.'
   if (t === 'usp_test') return 'USP(제품 차별점)를 입력하세요. 여러 개를 비교하려면 따로 업로드하세요.'
   return '광고 대본을 붙여넣으세요. 텍스트가 구체적일수록 현실적인 반응이 나옵니다.'
 })
@@ -457,9 +461,18 @@ const supportsAttachments = computed(() => {
 const supportsPlatform = computed(() => project.value?.type === 'ad_reaction')
 const attachedFile = ref(null)
 const referenceUrl = ref('')
-const onFilePick = (e) => {
+const onFilePick = async (e) => {
   const f = e.target.files?.[0]
-  attachedFile.value = f || null
+  if (!f) return
+  attachedFile.value = f
+  // 파일 선택 시 자동 업로드 — 파일 하나만으로 시드 생성
+  await handleUploadSeed()
+  // input 리셋 (같은 파일 재선택 가능하도록)
+  if (e.target) e.target.value = ''
+}
+const handleAddUrlSeed = async () => {
+  if (!referenceUrl.value.trim() || uploading.value) return
+  await handleUploadSeed()
 }
 const clearFile = () => { attachedFile.value = null }
 const canUpload = computed(() => seedContent.value.trim() || attachedFile.value || referenceUrl.value.trim())
@@ -751,6 +764,82 @@ const handleRun = async () => {
   flex-direction: column;
   gap: 10px;
 }
+.attach-block.prominent { margin-bottom: 18px; }
+
+.prominent-drop {
+  display: block;
+  position: relative;
+  cursor: pointer;
+  border: 2px dashed var(--rule);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  background: var(--paper-raised);
+  transition: all 0.2s;
+  overflow: hidden;
+}
+.prominent-drop:hover { border-color: var(--ink); background: var(--paper-card); }
+.prominent-drop.loading { border-color: var(--ink); background: var(--paper-card); cursor: wait; }
+.prominent-drop input[type="file"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0.1px;
+  height: 0.1px;
+}
+.drop-inner {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.drop-inner svg { color: var(--ink); flex-shrink: 0; }
+.drop-copy { display: flex; flex-direction: column; gap: 4px; }
+.drop-copy strong {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.drop-copy span {
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+.spin.big { width: 22px; height: 22px; border-width: 3px; border-color: var(--rule); border-top-color: var(--ink); }
+
+.or-sep {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 18px 0 4px;
+  color: var(--ink-faint);
+}
+.or-sep::before, .or-sep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+.or-sep span {
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+
+.url-add-btn {
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.url-add-btn:hover:not(:disabled) { background: var(--ink-soft); }
+.url-add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .attach-row { display: flex; }
 .attach-file {
   flex: 1;
