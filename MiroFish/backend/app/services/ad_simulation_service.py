@@ -138,7 +138,7 @@ def run_simulation(
     persona_config: Dict[str, Any],
     total_rounds: int,
     agent_count: int,
-    max_workers: int = 3,
+    max_workers: int = 2,
     seed_type: str = "ad_script",
     platform: str = "unspecified",
 ) -> None:

@@ -67,6 +67,7 @@ class LLMClient:
         temperature: float = 0.7,
         max_tokens: int = 4096,
         response_format: Optional[Dict] = None,
+        cache_system: bool = True,
     ) -> str:
         """
         채팅 요청
@@ -76,6 +77,8 @@ class LLMClient:
             temperature: 온도
             max_tokens: 최대 토큰
             response_format: {"type": "json_object"} 형식 - JSON 응답 강제
+            cache_system: 시스템 프롬프트를 prompt caching으로 감쌀지 (기본 True)
+                          반복 호출에서 input 토큰 ~90% 절감 → rate limit 회피
 
         Returns:
             모델 응답 텍스트
@@ -90,17 +93,46 @@ class LLMClient:
             )
             system = (system or "") + json_instruction
 
+        # Prompt caching: system 프롬프트를 ephemeral cache로 감싼다 (5분 TTL).
+        # 같은 에이전트의 여러 라운드가 동일 system을 공유하므로 90%+ 토큰 절감.
+        if system and cache_system and len(system) > 500:  # 짧은 프롬프트는 캐시 오히려 오버헤드
+            system_param = [{
+                "type": "text",
+                "text": system,
+                "cache_control": {"type": "ephemeral"},
+            }]
+        else:
+            system_param = system
+
+        # 메시지 내 첫 user 메시지(보통 긴 시드 콘텐츠 포함)도 캐시 가능하도록 구성
+        # 단, 마지막 메시지는 캐시하지 않음 (매번 다르기 때문)
+        if cache_system and len(chat_messages) >= 2:
+            processed = []
+            for i, msg in enumerate(chat_messages):
+                content = msg.get("content", "")
+                # 첫 user 메시지(보통 시드 포함)만 캐시 대상 — 충분히 긴 경우
+                if i == 0 and msg.get("role") == "user" and isinstance(content, str) and len(content) > 1500:
+                    processed.append({
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": content, "cache_control": {"type": "ephemeral"}}
+                        ],
+                    })
+                else:
+                    processed.append(msg)
+            chat_messages = processed
+
         kwargs = {
             "model": self.model,
             "messages": chat_messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
-        if system:
-            kwargs["system"] = system
+        if system_param:
+            kwargs["system"] = system_param
 
         # 지수 백오프 재시도 (rate limit / transient 실패 대응)
-        max_retries = 4
+        max_retries = 5
         last_err: Optional[Exception] = None
         for attempt in range(max_retries):
             try:
@@ -113,13 +145,22 @@ class LLMClient:
                 if not content:
                     raise ValueError("LLM 응답이 비어있습니다")
                 return content
-            except (RateLimitError, APIConnectionError) as e:
+            except RateLimitError as e:
+                last_err = e
+                # Rate limit은 Anthropic 권장: 60초 기본, 지수 증가
+                wait = min(75, 15 * (attempt + 1) + random.uniform(0, 3))
+                time.sleep(wait)
+            except APIConnectionError as e:
                 last_err = e
                 wait = min(30, (2 ** attempt) + random.uniform(0, 1.5))
                 time.sleep(wait)
             except APIStatusError as e:
                 last_err = e
-                if getattr(e, "status_code", None) in (408, 429, 500, 502, 503, 504):
+                status = getattr(e, "status_code", None)
+                if status == 429:
+                    wait = min(75, 15 * (attempt + 1) + random.uniform(0, 3))
+                    time.sleep(wait)
+                elif status in (408, 500, 502, 503, 504):
                     wait = min(20, (2 ** attempt) + random.uniform(0, 1.5))
                     time.sleep(wait)
                 else:
