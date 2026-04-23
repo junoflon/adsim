@@ -110,27 +110,20 @@ def create_ad_evaluation_user_prompt(
 - 이 노출 상황에서 실제로 당신이 어떻게 행동할지 (넘긴다/본다/누른다)
 {context}"""
 
+    # Round 2+ 에서는 seed_content 를 반복하지 않음. Claude가 이전 대화 이력에서 이미 광고 내용을 알고 있음.
+    # 이 설계로 매 라운드 입력 토큰이 크게 줄어 rate limit 회피.
     elif round_number == 2:
-        return f"""[광고 내용]
-{seed_content}
-{context}
-다시 이 광고를 찬찬히 보니 어떤가요?
+        return f"""{context}앞서 본 그 광고를 다시 찬찬히 떠올려보니 어떤가요?
 - 가장 설득력 있게 다가온 부분은 무엇인가요?
 - 당신의 일상과 연결되는 부분이 있나요?"""
 
     elif round_number == 3:
-        return f"""[광고 내용]
-{seed_content}
-{context}
-이 광고/제품에 대해 불안하거나 의심스러운 부분이 있나요?
+        return f"""{context}같은 광고/제품에 대해 불안하거나 의심스러운 부분이 있나요?
 - 가격, 품질, 신뢰성, 필요성 등에서
 - 솔직히 말해주세요."""
 
     else:
-        return f"""[광고 내용]
-{seed_content}
-{context}
-종합해서, 이 제품을 실제로 구매할 가능성은 얼마나 될까요?
+        return f"""{context}종합해서, 이 제품을 실제로 구매할 가능성은 얼마나 될까요?
 - 1~10점 (1=절대 안 산다, 10=꼭 사고 싶다)
 - 그렇게 판단한 이유도 1~2문장으로."""
 

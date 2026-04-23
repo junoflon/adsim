@@ -76,27 +76,19 @@ def create_product_evaluation_user_prompt(
 - 당신에게 필요할 것 같나요? 왜 그런가요?
 {context}"""
 
+    # Round 2+ 에서는 seed_content 를 반복하지 않음 (토큰 절감)
     elif round_number == 2:
-        return f"""[제품 컨셉]
-{seed_content}
-{context}
-이 제품을 찬찬히 살펴보니 어떤가요?
+        return f"""{context}같은 제품 컨셉을 찬찬히 살펴보니 어떤가요?
 - 당신의 일상에서 어떤 상황에 쓸 것 같나요?
 - 기존에 쓰던 대안과 비교하면 어떤 점이 끌리나요?"""
 
     elif round_number == 3:
-        return f"""[제품 컨셉]
-{seed_content}
-{context}
-이 제품에 대해 걱정되거나 의심스러운 부분이 있나요?
+        return f"""{context}같은 제품에 대해 걱정되거나 의심스러운 부분이 있나요?
 - 품질, 가격, 필요성, 지속 사용 여부 등
 - 솔직하게 말해주세요. 안 살 것 같으면 왜 안 사는지."""
 
     else:
-        return f"""[제품 컨셉]
-{seed_content}
-{context}
-종합해서, 이 제품이 실제 출시되면 구매할 가능성은 얼마나 될까요?
+        return f"""{context}종합해서, 이 제품이 실제 출시되면 구매할 가능성은 얼마나 될까요?
 - 1~10점 (1=절대 안 산다, 10=꼭 사고 싶다)
 - 적절한 가격대는 어느 정도일까요?
 - 판단 이유를 1~2문장으로."""
