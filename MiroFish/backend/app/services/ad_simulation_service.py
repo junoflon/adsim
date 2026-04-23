@@ -107,7 +107,7 @@ def _run_single_agent(
         # 다음 라운드를 위한 요약
         previous_reactions = response[:200]
 
-    # 감정 분석
+    # 감정 분석 — LLM 시도, 실패 시 로컬 키워드 분석으로 폴백
     sentiment_prompt = create_sentiment_analysis_prompt(conversation_log)
     try:
         sentiment_result = llm.chat_json(
@@ -115,13 +115,13 @@ def _run_single_agent(
             temperature=0.2,
             max_tokens=500,
         )
+        # 스키마 기본값 보강
+        if not sentiment_result.get("sentiment"):
+            raise ValueError("LLM이 sentiment 필드를 반환하지 않음")
     except Exception as e:
-        logger.error(f"에이전트 {agent['name']} 감정 분석 실패: {e}")
-        sentiment_result = {
-            "sentiment": "neutral",
-            "sentiment_score": 0.0,
-            "key_reactions": ["분석 실패"],
-        }
+        logger.warning(f"[agent {agent['agent_id']}/{agent['name']}] LLM 감정 분석 실패({type(e).__name__}), 로컬 폴백 사용")
+        from ..utils.sentiment_fallback import analyze_sentiment_local
+        sentiment_result = analyze_sentiment_local(conversation_log)
 
     return {
         "agent": agent,
