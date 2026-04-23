@@ -67,27 +67,19 @@ def create_brand_evaluation_user_prompt(
 - 당신의 취향/가치관과 맞는 부분 또는 어긋나는 부분은?
 {context}"""
 
+    # Round 2+ 에서는 seed_content 를 반복하지 않음 (토큰 절감)
     elif round_number == 2:
-        return f"""[브랜드 기획 자료]
-{seed_content}
-{context}
-다시 찬찬히 보니 이 브랜드의 가장 핵심 메시지는 뭐라고 느껴지나요?
+        return f"""{context}같은 브랜드를 다시 찬찬히 떠올려보니, 이 브랜드의 가장 핵심 메시지는 뭐라고 느껴지나요?
 - 당신의 일상에서 이 브랜드를 만나면 어떤 상황에서 마주칠 것 같나요?
 - 비슷한 카테고리의 기존 브랜드와 비교해서 어떤가요?"""
 
     elif round_number == 3:
-        return f"""[브랜드 기획 자료]
-{seed_content}
-{context}
-이 브랜드에 대해 의심스럽거나 걱정되는 부분이 있나요?
+        return f"""{context}이 브랜드에 대해 의심스럽거나 걱정되는 부분이 있나요?
 - 신뢰도, 일관성, 가격대 추정, 오버 포지셔닝 등
 - 솔직히 말해주세요."""
 
     else:
-        return f"""[브랜드 기획 자료]
-{seed_content}
-{context}
-종합해서 평가해주세요.
+        return f"""{context}종합해서 평가해주세요.
 - 이 브랜드가 실제 시장에 나오면 당신이 실제로 이용할 가능성 (1~10점)
 - 친구/지인에게 추천할 가능성 (1~10점)
 - 두 점수를 그렇게 매긴 이유를 1~2문장으로."""
