@@ -64,14 +64,14 @@ def generate_report(
             analysis = llm.chat_json(
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.4,
-                max_tokens=2000,
+                max_tokens=6000,
             )
         except Exception as e:
             logger.error(f"LLM 분석 실패: {e}")
             # 폴백: LLM 분석 실패 시 기본 보고서
             analysis = {
                 "key_insights": [f"{total}명 중 {sentiment_counts.get('positive', 0)}명이 긍정 반응"],
-                "concerns": ["자동 분석 실패 - 수동 검토 권장"],
+                "concerns": [f"자동 분석 실패 ({type(e).__name__}) - 수동 검토 권장"],
                 "recommendations": ["시뮬레이션을 재실행해주세요"],
                 "full_report_text": f"시뮬레이션 완료: 긍정 {overall_sentiment['positive']}%, 중립 {overall_sentiment['neutral']}%, 부정 {overall_sentiment['negative']}%",
             }
